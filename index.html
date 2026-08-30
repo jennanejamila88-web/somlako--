@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOMLAKO CHANTIER & MAGASIN Pro</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SheetJS Library for Excel Exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc, setDoc, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDItKLL6fURxyiaeZ-GIMGu7mwZYC2YLlw",
+            authDomain: "somlako26.firebaseapp.com",
+            projectId: "somlako26",
+            storageBucket: "somlako26.firebasestorage.app",
+            messagingSenderId: "608332620327",
+            appId: "1:608332620327:web:28d5a52076fb2335136402",
+            measurementId: "G-X5GVTQTCWK"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.collection = collection;
+        window.getDocs = getDocs;
+        window.addDoc = addDoc;
+        window.deleteDoc = deleteDoc;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.query = query;
+        window.where = where;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('somlako_user');
+            if(savedUser) {
+                appState.currentUser = JSON.parse(savedUser);
+                appState.authenticated = true;
+                document.getElementById('auth-modal').classList.add('hidden');
+                document.getElementById('app-container').classList.remove('hidden');
+                document.getElementById('user-display-name').innerText = appState.currentUser.username;
+                initAppFromFirebase();
+            }
+        });
+    </script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #print-envelopes-container, #print-envelopes-container *, #print-section-area, #print-section-area * { visibility: visible; }
+            #print-envelopes-container { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+            #print-section-area { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            
+            .envelope-page {
+                width: 100vw; height: 100vh; page-break-after: always;
+                display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0; padding: 0;
+            }
+            .envelope-box {
+                width: 220mm; height: 110mm; border: 1px dashed #cbd5e1;
+                display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10mm; background: white;
+            }
+        }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .subtab-active { background-color: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- AUTHENTICATION MODAL -->
+    <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-100">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 text-white rounded-2xl shadow-xl text-2xl font-bold mb-4">
+                    <i class="fa-solid fa-hard-hat"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-900">SOMLAKO CHANTIER</h2>
+                <p class="text-slate-500 text-sm mt-1">Connexion à votre compte</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Nom d'utilisateur</label>
+                    <input type="text" id="auth-username" required placeholder="Ex: admin" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Mot de passe</label>
+                    <input type="password" id="auth-password" required placeholder="••••••••" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 font-semibold tracking-widest">
+                </div>
+                <div id="auth-error" class="text-rose-500 text-xs font-medium hidden text-center">Nom d'utilisateur ou mot de passe incorrect.</div>
+                <button type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                    <span>Se connecter</span>
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app-container" class="hidden flex-1 flex flex-col">
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs no-print">
+            <div class="max-w-7xl mx-auto px-4 h-18 flex items-center justify-between">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="switchMainView('home')">
+                    <div class="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-md">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-slate-900 tracking-tight leading-tight">SOMLAKO CHANTIER</h1>
+                        <span class="text-xs text-emerald-600 font-semibold flex items-center gap-1">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Connecté : <span id="user-display-name" class="font-bold"></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="nav-home-btn" onclick="switchMainView('home')" class="hidden px-3.5 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 rounded-lg flex items-center gap-2">
+                        <i class="fa-solid fa-house"></i> Accueil
+                    </button>
+                    <button onclick="logout()" class="p-2.5 text-slate-600 hover:text-rose-600 rounded-lg" title="Déconnexion">
+                        <i class="fa-solid fa-power-off text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
+            <!-- VIEW HOME -->
+            <div id="view-home" class="space-y-8">
+                <div class="text-center max-w-2xl mx-auto py-4">
+                    <span class="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full uppercase">Tableau de Bord Central</span>
+                    <h2 class="text-3xl font-extrabold text-slate-900 mt-3">Choisissez un Module</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                    <!-- Module 1 -->
+                    <div onclick="switchMainView('module1')" class="bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl font-bold mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-users-gear"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-blue-600">Pointage & Salaires</h3>
+                        <p class="text-slate-500 text-xs mt-2">Gestion du personnel, pointage, heures sup, paniers et enveloppes (DL).</p>
+                    </div>
+                    <!-- Module 2 -->
+                    <div onclick="switchMainView('module2')" class="bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:border-emerald-300 transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl font-bold mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-emerald-600">Transport & Avances</h3>
+                        <p class="text-slate-500 text-xs mt-2">Suivi des voyages, avances, camions, bons, trajets et validation.</p>
+                    </div>
+                    <!-- Module 3 -->
+                    <div onclick="switchMainView('module3')" class="bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:border-purple-300 transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl font-bold mb-4 group-hover:bg-purple-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-purple-600">Effets & Chèques</h3>
+                        <p class="text-slate-500 text-xs mt-2">Gestion des chèques, lettres de change, scan, filtres et statuts.</p>
+                    </div>
+                    <!-- Module 4 -->
+                    <div onclick="switchMainView('module4')" class="bg-white rounded-2xl border p-6 shadow-sm hover:shadow-xl hover:border-amber-300 transition-all cursor-pointer group">
+                        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-xl font-bold mb-4 group-hover:bg-amber-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-900 group-hover:text-amber-600">Gestion Stock Magasin Safi</h3>
+                        <p class="text-slate-500 text-xs mt-2">Gestion 3 Stocks, Achats automatiques, Sorties (Lieu/Engin), Alertes & Filtres.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE 1 -->
+            <div id="view-module1" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl border px-6 pt-4 flex gap-6 no-print overflow-x-auto">
+                    <button onclick="switchSubModule1('salaries')" id="tab-salaries" class="pb-4 font-semibold text-sm tab-active flex items-center gap-2">
+                        <i class="fa-solid fa-id-badge"></i> Personnel (<span id="count-salaries">0</span>)
+                    </button>
+                    <button onclick="switchSubModule1('pointage')" id="tab-pointage" class="pb-4 font-medium text-sm text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-check"></i> Saisie Pointage
+                    </button>
+                    <button onclick="switchSubModule1('journal')" id="tab-journal" class="pb-4 font-medium text-sm text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i> Paie & Enveloppes DL
+                    </button>
+                </div>
+
+                <!-- SUB 1.1 -->
+                <div id="subview-salaries" class="bg-white rounded-2xl border p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold">Liste du Personnel</h3>
+                        <button onclick="openSalarieModal()" class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl">Ajouter Employé</button>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                <th class="py-3 px-4">Nom Complet</th>
+                                <th class="py-3 px-4">Fonction</th>
+                                <th class="py-3 px-4">Taux H.Sup</th>
+                                <th class="py-3 px-4">Panier par défaut</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-salaries-body" class="divide-y text-sm"></tbody>
+                    </table>
+                </div>
+
+                <!-- SUB 1.2 -->
+                <div id="subview-pointage" class="hidden bg-white rounded-2xl border p-6 space-y-6">
+                    <form onsubmit="savePointage(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Date</label>
+                            <input type="date" id="p-date" required class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Employé</label>
+                            <select id="p-salarie" required class="w-full p-2 bg-white border rounded-lg text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Chantier</label>
+                            <input type="text" id="p-chantier" required class="w-full p-2 bg-white border rounded-lg text-sm" placeholder="Nom du chantier">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1">Heures Supplémentaires (H.Sup)</label>
+                            <input type="number" step="0.5" id="p-hs" value="0" class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                        <div class="flex items-center gap-3 bg-white p-2 border rounded-lg">
+                            <input type="checkbox" id="p-panier-active" class="w-4 h-4 text-blue-600 rounded">
+                            <span class="text-xs font-medium">Activer Panier</span>
+                            <input type="number" id="p-panier-montant" value="30" class="w-20 p-1 bg-slate-50 border rounded text-xs">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="submit" class="w-full py-2 bg-blue-600 text-white font-semibold text-sm rounded-lg">Enregistrer Pointage</button>
+                        </div>
+                    </form>
+
+                    <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl no-print">
+                        <div class="flex items-center gap-3 w-full max-w-xs">
+                            <label class="text-xs font-bold text-slate-600 uppercase">Filtrer par Chantier :</label>
+                            <select id="filter-chantier" onchange="renderPointagesTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Tous les chantiers</option>
+                            </select>
+                        </div>
+                        <span id="pointage-count-badge" class="text-xs font-semibold text-slate-500"></span>
+                    </div>
+
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                <th class="py-3 px-4">Date</th>
+                                <th class="py-3 px-4">Employé</th>
+                                <th class="py-3 px-4">Chantier</th>
+                                <th class="py-3 px-4">Heures Sup (H.Sup)</th>
+                                <th class="py-3 px-4">Panier</th>
+                                <th class="py-3 px-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-pointages-body" class="divide-y text-sm"></tbody>
+                    </table>
+                </div>
+
+                <!-- SUB 1.3 -->
+                <div id="subview-journal" class="hidden bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3 no-print">
+                        <div>
+                            <h3 class="text-lg font-bold">Résumé de la Paie Mensuelle</h3>
+                            <p class="text-xs text-slate-500">Saisie et Validation</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-paie', 'Resume_Paie_Mensuelle')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-paie', 'Résumé de la Paie Mensuelle')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="printAllEnvelopes()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-2">
+                                <i class="fa-solid fa-print"></i> Imprimer Toutes les Enveloppes (DL)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table id="main-table-paie" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Employé</th>
+                                    <th class="py-3 px-4 text-center">Total H.Supp</th>
+                                    <th class="py-3 px-4 text-right">Total Paniers</th>
+                                    <th class="py-3 px-4 text-right">Net à Payer</th>
+                                    <th class="py-3 px-4 text-center">Validation</th>
+                                    <th class="py-3 px-4 text-center no-print">Enveloppe DL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-paie-body" class="divide-y text-sm"></tbody>
+                            <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                                <tr>
+                                    <td class="py-4 px-4 text-slate-800">TOTAL GLOBAL</td>
+                                    <td class="py-4 px-4 text-center text-blue-700" id="total-global-hsupp">0 h</td>
+                                    <td class="py-4 px-4 text-right text-slate-800" id="total-global-paniers">0 Dhs</td>
+                                    <td class="py-4 px-4 text-right text-emerald-600 text-lg" id="total-global-net">0 Dhs</td>
+                                    <td colspan="2" class="py-4 px-4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE 2: TRANSPORT -->
+            <div id="view-module2" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold">Gestion Transport, Avances & Gasoil</h3>
+                            <p class="text-xs text-slate-500">Suivi des voyages, matricules, trajets et calculs financiers</p>
+                        </div>
+                        <div class="flex items-center gap-2 no-print">
+                            <button onclick="exportTableToExcel('main-table-transport', 'Gestion_Transport_Avances')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-transport', 'Rapport de Transport et Avances')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="openTransportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Ajouter Voyage / Avance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtres Module 2 -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 no-print">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Chantier</label>
+                            <select id="filtre-t-chantier" onchange="renderTransportTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Tous les chantiers</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Matricule</label>
+                            <select id="filtre-t-matricule" onchange="renderTransportTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Tous les matricules</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Trajet</label>
+                            <input type="text" id="filtre-t-trajet" oninput="renderTransportTable()" placeholder="Rechercher trajet..." class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Date</label>
+                            <input type="date" id="filtre-t-date" onchange="renderTransportTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-transport" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Date</th>
+                                    <th class="py-3 px-4">Type</th>
+                                    <th class="py-3 px-4">Chauffeur</th>
+                                    <th class="py-3 px-4">Matricule</th>
+                                    <th class="py-3 px-4">Chantier</th>
+                                    <th class="py-3 px-4">Bon / Ref</th>
+                                    <th class="py-3 px-4">Trajet (De ➔ À)</th>
+                                    <th class="py-3 px-4 text-center">Quantité</th>
+                                    <th class="py-3 px-4 text-right">Prix Unitaire</th>
+                                    <th class="py-3 px-4 text-right font-bold text-slate-900">Montant Total</th>
+                                    <th class="py-3 px-4 text-center">Validation</th>
+                                    <th class="py-3 px-4 text-right no-print">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-transport-body" class="divide-y text-sm"></tbody>
+                            <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
+                                <tr>
+                                    <td colspan="9" class="py-4 px-4 text-right text-slate-800">TOTAL GÉNÉRAL :</td>
+                                    <td class="py-4 px-4 text-right text-emerald-600 text-lg" id="total-global-transport">0.00 Dhs</td>
+                                    <td colspan="2" class="py-4 px-4"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE 3: EFFETS & CHÈQUES -->
+            <div id="view-module3" class="hidden space-y-6">
+                <div class="bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <h3 class="text-xl font-bold">Gestion des Effets & Chèques</h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-effets', 'Gestion_Effets_Cheques')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-effets', 'Gestion des Effets et Chèques')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="openEffetModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> Ajouter un effet
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 no-print">
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Type</label>
+                            <select id="filtre-type" onchange="renderEffetsTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Tous les types</option>
+                                <option value="Chèque">Chèque</option>
+                                <option value="Lettre de change">Lettre de change</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Banque</label>
+                            <select id="filtre-banque" onchange="renderEffetsTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Toutes les banques</option>
+                                <option value="Attijariwafa Bank">Attijariwafa Bank</option>
+                                <option value="BCP (Chaabi)">BCP (Chaabi)</option>
+                                <option value="Bank of Africa">Bank of Africa (BMCE)</option>
+                                <option value="Société Générale Maroc">Société Générale Maroc</option>
+                                <option value="BMCI">BMCI</option>
+                                <option value="Crédit du Maroc">Crédit du Maroc</option>
+                                <option value="Crédit Agricole du Maroc">Crédit Agricole du Maroc</option>
+                                <option value="CIH Bank">CIH Bank</option>
+                                <option value="CFG Bank">CFG Bank</option>
+                                <option value="Al Barid Bank">Al Barid Bank</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Bénéficiaire</label>
+                            <input type="text" id="filtre-beneficiaire" oninput="renderEffetsTable()" placeholder="Rechercher bénéficiaire..." class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Échéance</label>
+                            <input type="date" id="filtre-date" onchange="renderEffetsTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-effets" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Type</th>
+                                    <th class="py-3 px-4">N° de Snd</th>
+                                    <th class="py-3 px-4">Bénéficiaire</th>
+                                    <th class="py-3 px-4">Service</th>
+                                    <th class="py-3 px-4">Banque</th>
+                                    <th class="py-3 px-4">Échéance</th>
+                                    <th class="py-3 px-4 text-right">Montant</th>
+                                    <th class="py-3 px-4 text-center no-print">Scan</th>
+                                    <th class="py-3 px-4 text-center">Statut</th>
+                                    <th class="py-3 px-4 text-right no-print">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-effets-body" class="divide-y text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE 4: GESTION STOCK MAGASIN SAFI -->
+            <div id="view-module4" class="hidden space-y-6">
+                <!-- Sub Tabs Nav for Stock -->
+                <div class="bg-white rounded-2xl border px-6 pt-4 flex gap-4 no-print overflow-x-auto">
+                    <button onclick="switchStockTab('inv')" id="stock-tab-inv" class="pb-3 px-3 font-semibold text-sm tab-active flex items-center gap-2">
+                        <i class="fa-solid fa-boxes-stacked"></i> 1. Stock Général & Reste (<span id="count-articles">0</span>)
+                    </button>
+                    <button onclick="switchStockTab('achats')" id="stock-tab-achats" class="pb-3 px-3 font-medium text-sm text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping"></i> 2. Achats & Entrées (+ Stock)
+                    </button>
+                    <button onclick="switchStockTab('sorties')" id="stock-tab-sorties" class="pb-3 px-3 font-medium text-sm text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-truck-ramp-box"></i> 3. Sorties & Affectation (- Stock)
+                    </button>
+                    <button onclick="switchStockTab('alertes')" id="stock-tab-alertes" class="pb-3 px-3 font-medium text-sm text-slate-500 flex items-center gap-2">
+                        <i class="fa-solid fa-bell text-rose-500"></i> 4. Alertes & Commandes (<span id="count-alertes" class="text-rose-600 font-bold">0</span>)
+                    </button>
+                </div>
+
+                <!-- STOCK SUB 1: INVENTAIRE CENTRAL & RESTE AUTOMATIQUE -->
+                <div id="stock-subview-inv" class="bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold">État du Stock Magasin Safi (En Temps Réel)</h3>
+                            <p class="text-xs text-slate-500">Quantité restante calculée automatiquement : (Entrées - Sorties)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-stock-inv', 'Stock_General_Magasin_Safi')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-stock-inv', 'État du Stock Général Magasin Safi')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="openNewArticleModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-plus"></i> Créer Article
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Barre de Filtrage Stock -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center gap-4 no-print">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Rechercher un article (Référence ou Désignation)</label>
+                            <input type="text" id="filtre-stock-recherche" oninput="renderStockInventoryTable()" placeholder="Ex: Filtre, PIECE-001..." class="w-full p-2 bg-white border rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par État</label>
+                            <select id="filtre-stock-etat" onchange="renderStockInventoryTable()" class="p-2 bg-white border rounded-lg text-sm">
+                                <option value="">Tous les articles</option>
+                                <option value="alerte">En Alerte uniquement</option>
+                                <option value="ok">Stock Suffisant</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-stock-inv" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Référence</th>
+                                    <th class="py-3 px-4">Désignation</th>
+                                    <th class="py-3 px-4 text-center">Entrées (Achats)</th>
+                                    <th class="py-3 px-4 text-center">Sorties</th>
+                                    <th class="py-3 px-4 text-center">Reste en Stock</th>
+                                    <th class="py-3 px-4 text-center">Seuil Alerte</th>
+                                    <th class="py-3 px-4 text-center no-print">Statut / Action / Suppression</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-stock-inventory-body" class="divide-y text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STOCK SUB 2: ACHATS -->
+                <div id="stock-subview-achats" class="hidden bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold">Historique des Achats (Mouvement Entrée)</h3>
+                            <p class="text-xs text-slate-500">Chaque achat est ajouté automatiquement au solde du stock</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-stock-achats', 'Historique_Achats_Stock')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-stock-achats', 'Historique des Achats Stock')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="openAchatModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-cart-plus"></i> Enregistrer Achat
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-stock-achats" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Date Achat</th>
+                                    <th class="py-3 px-4">Article</th>
+                                    <th class="py-3 px-4 text-center">Quantité Achetée</th>
+                                    <th class="py-3 px-4 text-right">Prix Unitaire (DH)</th>
+                                    <th class="py-3 px-4">Fournisseur</th>
+                                    <th class="py-3 px-4">N° BL / Facture</th>
+                                    <th class="py-3 px-4 text-right no-print">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-achats-body" class="divide-y text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STOCK SUB 3: SORTIES -->
+                <div id="stock-subview-sorties" class="hidden bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold">Sorties du Stock Magasin</h3>
+                            <p class="text-xs text-slate-500">Préciser la machine ou l'emplacement de montage de la pièce</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-stock-sorties', 'Sorties_Stock_Magasin')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-stock-sorties', 'Historique des Sorties Stock')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                            <button onclick="openSortieModal()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Enregistrer Sortie
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-stock-sorties" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Date Sortie</th>
+                                    <th class="py-3 px-4">Article</th>
+                                    <th class="py-3 px-4 text-center">Quantité Sortie</th>
+                                    <th class="py-3 px-4 font-bold text-indigo-700">Lieu / Engin de Montage</th>
+                                    <th class="py-3 px-4">Demandeur / Preneur</th>
+                                    <th class="py-3 px-4">Chantier</th>
+                                    <th class="py-3 px-4 text-right no-print">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-sorties-body" class="divide-y text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- STOCK SUB 4: ALERTES -->
+                <div id="stock-subview-alertes" class="hidden bg-white rounded-2xl border p-6 space-y-6">
+                    <div class="flex justify-between items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="text-xl font-bold text-rose-600">Articles en Alerte de Stock (Seuil Minimal Atteint)</h3>
+                            <p class="text-xs text-slate-500">Articles ayant atteint le seuil minimal et nécessitant une commande d'achat</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportTableToExcel('main-table-stock-alertes', 'Articles_Stock_En_Alerte')" class="px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-file-excel"></i> Exporter Excel
+                            </button>
+                            <button onclick="printTableSection('main-table-stock-alertes', 'Rapport des Articles en Alerte Stock')" class="px-3 py-2 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Imprimer / PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table id="main-table-stock-alertes" class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
+                                    <th class="py-3 px-4">Référence</th>
+                                    <th class="py-3 px-4">Désignation</th>
+                                    <th class="py-3 px-4 text-center">Reste Actuel</th>
+                                    <th class="py-3 px-4 text-center">Seuil Minimal</th>
+                                    <th class="py-3 px-4">Meilleur Fournisseur Précédent</th>
+                                    <th class="py-3 px-4 text-center no-print">Action Recommandée</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-alertes-body" class="divide-y text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PRINT CONTAINERS -->
+    <div id="print-envelopes-container"></div>
+    <div id="print-section-area"></div>
+
+    <!-- MODALS SECTION -->
+    <!-- Salarié Modal -->
+    <div id="modal-salarie" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Ajouter Employé</h3>
+            <form onsubmit="saveSalarie(event)" class="space-y-4">
+                <input type="text" id="s-nom" required placeholder="Nom complet" class="w-full p-2.5 border rounded-xl text-sm">
+                <input type="text" id="s-fonction" required placeholder="Fonction" class="w-full p-2.5 border rounded-xl text-sm">
+                <input type="number" step="0.5" id="s-taux-hs" value="25" placeholder="Taux heure sup" class="w-full p-2.5 border rounded-xl text-sm">
+                <input type="number" id="s-panier" value="30" placeholder="Panier par défaut" class="w-full p-2.5 border rounded-xl text-sm">
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeSalarieModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Transport Modal -->
+    <div id="modal-transport" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Ajouter Voyage, Avance ou Gasoil</h3>
+            <form onsubmit="saveTransport(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Date</label>
+                        <input type="date" id="t-date" required class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Type</label>
+                        <select id="t-type" class="w-full p-2.5 border rounded-xl text-sm font-bold text-emerald-700">
+                            <option value="Voyage">Voyage de Transport</option>
+                            <option value="Avance">Avance Chauffeur</option>
+                            <option value="Gasoil">Gasoil</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Chauffeur</label>
+                        <input type="text" id="t-chauffeur" required placeholder="Nom du chauffeur" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Matricule Camion</label>
+                        <input type="text" id="t-matricule" required placeholder="Ex: 12345-A-26" class="w-full p-2.5 border rounded-xl text-sm font-mono font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Chantier</label>
+                        <input type="text" id="t-chantier" required placeholder="Nom du chantier" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Bon / Référence</label>
+                        <input type="text" id="t-bon" placeholder="N° Bon ou Réf" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Trajet (De ➔ À)</label>
+                    <input type="text" id="t-trajet" placeholder="Ex: DEPOT CHAMAIA ➔ ROUTE GZOULA" class="w-full p-2.5 border rounded-xl text-sm font-semibold">
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xl border">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Quantité</label>
+                        <input type="number" step="0.01" id="t-qte" value="1" oninput="calculateTransportTotal()" class="w-full p-2 border rounded-lg text-sm font-bold text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Prix Unitaire</label>
+                        <input type="number" step="0.01" id="t-pu" value="0" oninput="calculateTransportTotal()" class="w-full p-2 border rounded-lg text-sm font-bold text-center">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1 text-emerald-700">Montant Total</label>
+                        <input type="number" step="0.01" id="t-total" readonly class="w-full p-2 border bg-emerald-50 rounded-lg text-sm font-black text-emerald-700 text-center">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="t-valide" checked class="w-5 h-5 text-emerald-600 rounded">
+                    <span class="text-xs font-semibold">Validé</span>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeTransportModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Effet Modal -->
+    <div id="modal-effet" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Ajouter Chèque / Lettre de Change</h3>
+            <form onsubmit="saveEffet(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Type</label>
+                        <select id="e-type" class="w-full p-2.5 border rounded-xl text-sm font-bold text-purple-700">
+                            <option value="Chèque">Chèque</option>
+                            <option value="Lettre de change">Lettre de change (L.C.)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">N° de Chèque / Effet</label>
+                        <input type="text" id="e-numero" required placeholder="Ex: 1234567" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Montant (DH)</label>
+                        <input type="number" step="0.01" id="e-montant" required placeholder="0.00" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Échéance</label>
+                        <input type="date" id="e-echeance" required class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Nom du Bénéficiaire</label>
+                    <input type="text" id="e-beneficiaire" required placeholder="Ex: TRANSAID SARL..." class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Type de Service</label>
+                    <input type="text" id="e-serviceType" required placeholder="Ex: Fournisseur, Carburant, Location..." class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Banque</label>
+                        <select id="e-banque" class="w-full p-2.5 border rounded-xl text-sm">
+                            <option value="Attijariwafa Bank">Attijariwafa Bank</option>
+                            <option value="BCP (Chaabi)">BCP (Chaabi)</option>
+                            <option value="Bank of Africa">Bank of Africa (BMCE)</option>
+                            <option value="Société Générale Maroc">Société Générale Maroc</option>
+                            <option value="BMCI">BMCI</option>
+                            <option value="Crédit du Maroc">Crédit du Maroc</option>
+                            <option value="Crédit Agricole du Maroc">Crédit Agricole du Maroc</option>
+                            <option value="CIH Bank">CIH Bank</option>
+                            <option value="CFG Bank">CFG Bank</option>
+                            <option value="Al Barid Bank">Al Barid Bank</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Statut</label>
+                        <select id="e-statut" class="w-full p-2.5 border rounded-xl text-sm font-semibold" onchange="toggleEffetDateModal()">
+                            <option value="En attente">En attente</option>
+                            <option value="Effet Reporté">Effet Reporté</option>
+                            <option value="Encaissé">Encaissé</option>
+                            <option value="Impayé">Impayé</option>
+                            <option value="Annulé">Annulé</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="e-effetDateGroup" style="display: none;">
+                    <label class="block text-xs font-semibold mb-1 text-amber-600 font-bold">Date de l'Effet Reporté</label>
+                    <input type="date" id="e-effetDate" class="w-full p-2.5 border rounded-xl text-sm border-amber-300 bg-amber-50">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Scan / Photo du Chèque</label>
+                    <input type="file" id="e-scan" accept="image/*" class="w-full p-2 border rounded-xl text-sm bg-slate-50">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeEffetModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-sm">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- STOCK MODALS -->
+    <!-- Modal 1: Nouvel Article -->
+    <div id="modal-stock-article" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Créer un Nouvel Article en Stock</h3>
+            <form onsubmit="saveStockArticle(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Référence Article (Code)</label>
+                    <input type="text" id="st-art-ref" required placeholder="Ex: PIECE-001" class="w-full p-2.5 border rounded-xl text-sm font-mono font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Désignation (Nom de la pièce)</label>
+                    <input type="text" id="st-art-nom" required placeholder="Ex: Filtre à Huile CAT 320" class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Seuil Alerte Minimal</label>
+                    <input type="number" id="st-art-seuil" required value="2" class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeStockArticleModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Créer Article</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Nouvel Achat (Entrée Stock) -->
+    <div id="modal-stock-achat" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Enregistrer un Achat (+ Stock)</h3>
+            <form onsubmit="saveStockAchat(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Date Achat</label>
+                        <input type="date" id="st-ac-date" required class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Sélectionner Article</label>
+                        <select id="st-ac-article" required class="w-full p-2.5 border rounded-xl text-sm font-semibold"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Quantité Achetée</label>
+                        <input type="number" id="st-ac-qte" required value="1" min="1" class="w-full p-2.5 border rounded-xl text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1 text-emerald-600">Prix Unitaire D'Achat (DH)</label>
+                        <input type="number" step="0.01" id="st-ac-prix" required placeholder="0.00" class="w-full p-2.5 border rounded-xl text-sm font-bold text-emerald-600">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Fournisseur</label>
+                        <input type="text" id="st-ac-fournisseur" required placeholder="Ex: Ets Safi Pièces" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">N° BL / Facture</label>
+                        <input type="text" id="st-ac-bl" placeholder="Ex: BL-8874" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAchatModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm">Valider Achat (+ Stock)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Sortie De Stock -->
+    <div id="modal-stock-sortie" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <h3 class="text-lg font-bold mb-4">Enregistrer Une Sortie (- Stock)</h3>
+            <form onsubmit="saveStockSortie(event)" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Date Sortie</label>
+                        <input type="date" id="st-so-date" required class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Sélectionner Article</label>
+                        <select id="st-so-article" required class="w-full p-2.5 border rounded-xl text-sm font-semibold"></select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Quantité Sortie</label>
+                        <input type="number" id="st-so-qte" required value="1" min="1" class="w-full p-2.5 border rounded-xl text-sm font-bold text-rose-600">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">Demandeur / Preneur</label>
+                        <input type="text" id="st-so-preneur" placeholder="Ex: Chauffeur Hassan" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-indigo-700">Lieu ou Engin de Montage (Où la pièce a été montée ?)</label>
+                    <input type="text" id="st-so-lieu" required placeholder="Ex: Camion Volvo #14 / Malaxeur 02 / Magasin Chantier" class="w-full p-2.5 border-2 border-indigo-200 rounded-xl text-sm bg-indigo-50 font-semibold text-indigo-900">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Chantier Destinataire</label>
+                    <input type="text" id="st-so-chantier" placeholder="Ex: Chantier Safi Nord" class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeSortieModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-sm">Valider Sortie (- Stock)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        let appState = {
+            authenticated: false,
+            currentUser: null,
+            salaries: [],
+            pointages: [],
+            transport: [],
+            effets: [],
+            stockArticles: [],
+            stockAchats: [],
+            stockSorties: [],
+            paieValidations: {}
+        };
+
+        function exportTableToExcel(tableID, filename = 'Export') {
+            const table = document.getElementById(tableID);
+            if (!table) return;
+            const cloneTable = table.cloneNode(true);
+            cloneTable.querySelectorAll('.no-print').forEach(el => el.remove());
+            const wb = XLSX.utils.table_to_book(cloneTable, { sheet: "Data" });
+            XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        function printTableSection(tableID, title) {
+            const table = document.getElementById(tableID);
+            if(!table) return;
+            const printContainer = document.getElementById('print-section-area');
+            printContainer.innerHTML = `
+                <div style="padding: 20px;">
+                    <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
+                    ${table.outerHTML}
+                </div>
+            `;
+            window.print();
+            printContainer.innerHTML = '';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('auth-username').value.trim();
+            const passwordInput = document.getElementById('auth-password').value.trim();
+            const errorElement = document.getElementById('auth-error');
+
+            try {
+                const q = window.query(
+                    window.collection(window.db, "users"), 
+                    window.where("username", "==", usernameInput),
+                    window.where("password", "==", passwordInput)
+                );
+                const querySnapshot = await window.getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    const userData = querySnapshot.docs[0].data();
+                    appState.currentUser = { id: querySnapshot.docs[0].id, ...userData };
+                    appState.authenticated = true;
+                    localStorage.setItem('somlako_user', JSON.stringify(appState.currentUser));
+                    document.getElementById('auth-modal').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    document.getElementById('user-display-name').innerText = appState.currentUser.username;
+                    errorElement.classList.add('hidden');
+                    initAppFromFirebase();
+                } else {
+                    const allUsersSnap = await window.getDocs(window.collection(window.db, "users"));
+                    if(allUsersSnap.empty && usernameInput === "admin" && passwordInput === "admin2026") {
+                        const defaultUser = { username: "admin", password: "admin2026", role: "admin" };
+                        const newUserRef = await window.addDoc(window.collection(window.db, "users"), defaultUser);
+                        appState.currentUser = { id: newUserRef.id, ...defaultUser };
+                        appState.authenticated = true;
+                        localStorage.setItem('somlako_user', JSON.stringify(appState.currentUser));
+                        document.getElementById('auth-modal').classList.add('hidden');
+                        document.getElementById('app-container').classList.remove('hidden');
+                        document.getElementById('user-display-name').innerText = appState.currentUser.username;
+                        initAppFromFirebase();
+                    } else {
+                        errorElement.classList.remove('hidden');
+                    }
+                }
+            } catch (err) {
+                console.error("Erreur de connexion:", err);
+                errorElement.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('somlako_user');
+            location.reload();
+        }
+
+        async function initAppFromFirebase() {
+            try {
+                const salSnap = await getDocs(collection(window.db, "salaries"));
+                appState.salaries = [];
+                salSnap.forEach(docSnap => appState.salaries.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const poiSnap = await getDocs(collection(window.db, "pointages"));
+                appState.pointages = [];
+                poiSnap.forEach(docSnap => appState.pointages.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const traSnap = await getDocs(collection(window.db, "transport"));
+                appState.transport = [];
+                traSnap.forEach(docSnap => appState.transport.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const effSnap = await getDocs(collection(window.db, "effets"));
+                appState.effets = [];
+                effSnap.forEach(docSnap => appState.effets.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const artSnap = await getDocs(collection(window.db, "stock_articles"));
+                appState.stockArticles = [];
+                artSnap.forEach(docSnap => appState.stockArticles.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const achSnap = await getDocs(collection(window.db, "stock_achats"));
+                appState.stockAchats = [];
+                achSnap.forEach(docSnap => appState.stockAchats.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const sorSnap = await getDocs(collection(window.db, "stock_sorties"));
+                appState.stockSorties = [];
+                sorSnap.forEach(docSnap => appState.stockSorties.push({ id: docSnap.id, ...docSnap.data() }));
+
+                const valSnap = await getDocs(collection(window.db, "paie_validations"));
+                appState.paieValidations = {};
+                valSnap.forEach(docSnap => { appState.paieValidations[docSnap.id] = docSnap.data().statut; });
+
+            } catch (err) {
+                console.error("Erreur de chargement Firebase:", err);
+            }
+
+            renderSalariesTable();
+            renderPointagesTable();
+            renderTransportTable();
+            renderEffetsTable();
+            renderStockInventoryTable();
+            renderAchatsTable();
+            renderSortiesTable();
+            renderAlertesTable();
+            updateSalariesDropdown();
+            updateChantiersDropdown();
+            updateTransportDropdowns();
+            updateStockDropdowns();
+        }
+
+        function switchMainView(v) {
+            ['home', 'module1', 'module2', 'module3', 'module4'].forEach(m => document.getElementById(`view-${m}`).classList.add('hidden'));
+            document.getElementById(`view-${v}`).classList.remove('hidden');
+            if(v === 'home') document.getElementById('nav-home-btn').classList.add('hidden');
+            else document.getElementById('nav-home-btn').classList.remove('hidden');
+        }
+
+        function switchSubModule1(sub) {
+            ['salaries', 'pointage', 'journal'].forEach(s => {
+                document.getElementById(`subview-${s}`).classList.add('hidden');
+                document.getElementById(`tab-${s}`).classList.remove('tab-active');
+            });
+            document.getElementById(`subview-${sub}`).classList.remove('hidden');
+            document.getElementById(`tab-${sub}`).classList.add('tab-active');
+            if(sub === 'journal') renderPaieSummary();
+            if(sub === 'pointage') updateChantiersDropdown();
+        }
+
+        function switchStockTab(st) {
+            ['inv', 'achats', 'sorties', 'alertes'].forEach(s => {
+                document.getElementById(`stock-subview-${s}`).classList.add('hidden');
+                document.getElementById(`stock-tab-${s}`).classList.remove('tab-active');
+            });
+            document.getElementById(`stock-subview-${st}`).classList.remove('hidden');
+            document.getElementById(`stock-tab-${st}`).classList.add('tab-active');
+        }
+
+        function openSalarieModal() { document.getElementById('modal-salarie').classList.remove('hidden'); document.getElementById('modal-salarie').classList.add('flex'); }
+        function closeSalarieModal() { document.getElementById('modal-salarie').classList.add('hidden'); document.getElementById('modal-salarie').classList.remove('flex'); }
+        
+        async function saveSalarie(e) {
+            e.preventDefault();
+            const nom = document.getElementById('s-nom').value;
+            const fonction = document.getElementById('s-fonction').value;
+            const tauxHs = parseFloat(document.getElementById('s-taux-hs').value) || 0;
+            const panier = parseFloat(document.getElementById('s-panier').value) || 0;
+            
+            try {
+                const docRef = await addDoc(collection(window.db, "salaries"), { nom, fonction, tauxHs, panier });
+                appState.salaries.push({ id: docRef.id, nom, fonction, tauxHs, panier });
+                closeSalarieModal();
+                renderSalariesTable();
+                updateSalariesDropdown();
+                document.getElementById('s-nom').value = '';
+                document.getElementById('s-fonction').value = '';
+            } catch(err) {
+                alert("Erreur lors de l'enregistrement");
+            }
+        }
+
+        function renderSalariesTable() {
+            const tbody = document.getElementById('table-salaries-body');
+            tbody.innerHTML = appState.salaries.length ? '' : `<tr><td colspan="5" class="text-center py-4 text-slate-400">Aucune donnée disponible</td></tr>`;
+            document.getElementById('count-salaries').innerText = appState.salaries.length;
+            appState.salaries.forEach(s => {
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-3 px-4 font-bold">${s.nom}</td><td class="py-3 px-4">${s.fonction}</td><td class="py-3 px-4">${s.tauxHs} Dhs</td><td class="py-3 px-4">${s.panier} Dhs</td><td class="py-3 px-4 text-right"><button onclick="deleteSalarie('${s.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+        }
+
+        async function deleteSalarie(id) {
+            await deleteDoc(doc(window.db, "salaries", id));
+            appState.salaries = appState.salaries.filter(s => s.id !== id);
+            renderSalariesTable();
+            updateSalariesDropdown();
+        }
+
+        function updateSalariesDropdown() {
+            const sel = document.getElementById('p-salarie');
+            if(!sel) return;
+            sel.innerHTML = '<option value="">Sélectionner un employé</option>';
+            appState.salaries.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.nom}</option>`);
+        }
+
+        async function savePointage(e) {
+            e.preventDefault();
+            const date = document.getElementById('p-date').value;
+            const salId = document.getElementById('p-salarie').value;
+            const chantier = document.getElementById('p-chantier').value.trim();
+            const hs = parseFloat(document.getElementById('p-hs').value) || 0;
+            const panierActive = document.getElementById('p-panier-active').checked;
+            const panierMontant = panierActive ? parseFloat(document.getElementById('p-panier-montant').value) || 0 : 0;
+            const sal = appState.salaries.find(s => s.id === salId);
+
+            const pointageData = { date, salId, salNom: sal ? sal.nom : '', chantier, hs, panierActive, panierMontant };
+            const docRef = await addDoc(collection(window.db, "pointages"), pointageData);
+            appState.pointages.push({ id: docRef.id, ...pointageData });
+            updateChantiersDropdown();
+            renderPointagesTable();
+            document.getElementById('p-hs').value = '0';
+        }
+
+        function updateChantiersDropdown() {
+            const selectFilter = document.getElementById('filter-chantier');
+            if(!selectFilter) return;
+            const currentVal = selectFilter.value;
+            const chantiersSet = new Set();
+            appState.pointages.forEach(p => { if(p.chantier) chantiersSet.add(p.chantier); });
+            selectFilter.innerHTML = '<option value="">Tous les chantiers</option>';
+            chantiersSet.forEach(ch => { selectFilter.innerHTML += `<option value="${ch}">${ch}</option>`; });
+            selectFilter.value = currentVal;
+        }
+
+        function renderPointagesTable() {
+            const tbody = document.getElementById('table-pointages-body');
+            const filterChantier = document.getElementById('filter-chantier').value;
+            tbody.innerHTML = '';
+            const filteredPointages = appState.pointages.filter(p => !filterChantier || p.chantier === filterChantier);
+            document.getElementById('pointage-count-badge').innerText = `${filteredPointages.length} ligne(s) affichée(s)`;
+
+            if(filteredPointages.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400">Aucun pointage trouvé</td></tr>`;
+                return;
+            }
+
+            filteredPointages.forEach(p => {
+                let hsBadge = p.hs > 0 ? `<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 font-bold">${p.hs} h</span>` : '<span class="text-slate-400">-</span>';
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4">${p.date}</td>
+                    <td class="py-3 px-4 font-bold">${p.salNom}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
+                    <td class="py-3 px-4">${hsBadge}</td>
+                    <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
+                    <td class="py-3 px-4 text-right"><button onclick="deletePointage('${p.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+
+        async function deletePointage(id) { 
+            await deleteDoc(doc(window.db, "pointages", id));
+            appState.pointages = appState.pointages.filter(p => p.id !== id); 
+            updateChantiersDropdown();
+            renderPointagesTable(); 
+        }
+
+        function renderPaieSummary() {
+            const tbody = document.getElementById('table-paie-body');
+            tbody.innerHTML = '';
+            let summary = {};
+            let grandTotalHs = 0;
+            let grandTotalPaniers = 0;
+            let grandTotalNet = 0;
+
+            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
+            
+            appState.pointages.forEach(p => {
+                if(summary[p.salId]) {
+                    summary[p.salId].paniers += p.panierMontant;
+                    summary[p.salId].totalHs += (p.hs || 0);
+                    if(p.chantier) summary[p.salId].chantiers.add(p.chantier);
+                }
+            });
+
+            Object.keys(summary).forEach(id => {
+                let d = summary[id];
+                let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
+                let montantHs = d.totalHs * d.tauxHs;
+                let netAPayer = d.paniers + montantHs;
+                let statut = appState.paieValidations[id] || 'Saisie';
+
+                grandTotalHs += d.totalHs;
+                grandTotalPaniers += d.paniers;
+                grandTotalNet += netAPayer;
+
+                let isValidated = statut === 'Validé';
+                let validationBadge = isValidated 
+                    ? `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg"><i class="fa-solid fa-check-double"></i> Validé</span>`
+                    : `<button onclick="validatePaie('${id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg border border-amber-300">Valider</button>`;
+
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 font-bold">${d.nom}</td>
+                    <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
+                    <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
+                    <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
+                    <td class="py-3 px-4 text-center">${validationBadge}</td>
+                    <td class="py-3 px-4 text-center no-print">
+                        <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
+                    </td>
+                </tr>`;
+            });
+
+            document.getElementById('total-global-hsupp').innerText = `${grandTotalHs} h`;
+            document.getElementById('total-global-paniers').innerText = `${grandTotalPaniers.toFixed(2)} Dhs`;
+            document.getElementById('total-global-net').innerText = `${grandTotalNet.toFixed(2)} Dhs`;
+        }
+
+        async function validatePaie(salarieId) {
+            appState.paieValidations[salarieId] = 'Validé';
+            await setDoc(doc(window.db, "paie_validations", salarieId), { statut: 'Validé' });
+            renderPaieSummary();
+        }
+
+        function printSingleEnvelope(nom, fonction, chantier, net) {
+            const container = document.getElementById('print-envelopes-container');
+            container.innerHTML = `
+                <div class="envelope-page">
+                    <div class="envelope-box">
+                        <div class="w-full space-y-6 text-center">
+                            <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
+                            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
+                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
+                            </div>
+                            <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                <span class="text-xl font-black text-blue-600">${net}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            window.print();
+            container.innerHTML = '';
+        }
+
+        function printAllEnvelopes() {
+            const container = document.getElementById('print-envelopes-container');
+            container.innerHTML = '';
+            let summary = {};
+            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
+            appState.pointages.forEach(p => {
+                if(summary[p.salId]) {
+                    summary[p.salId].paniers += p.panierMontant;
+                    summary[p.salId].totalHs += (p.hs || 0);
+                    if(p.chantier) summary[p.salId].chantiers.add(p.chantier);
+                }
+            });
+
+            Object.keys(summary).forEach(id => {
+                let d = summary[id];
+                let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
+                let netAPayer = d.paniers + (d.totalHs * d.tauxHs);
+                container.innerHTML += `
+                    <div class="envelope-page">
+                        <div class="envelope-box">
+                            <div class="w-full space-y-6 text-center">
+                                <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
+                                <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
+                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
+                                </div>
+                                <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                    <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                    <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            window.print();
+            container.innerHTML = '';
+        }
+
+        // TRANSPORT LOGIC
+        function openTransportModal() { 
+            document.getElementById('modal-transport').classList.remove('hidden'); 
+            document.getElementById('modal-transport').classList.add('flex'); 
+            calculateTransportTotal();
+        }
+        function closeTransportModal() { 
+            document.getElementById('modal-transport').classList.add('hidden'); 
+            document.getElementById('modal-transport').classList.remove('flex'); 
+        }
+
+        function calculateTransportTotal() {
+            const qte = parseFloat(document.getElementById('t-qte').value) || 0;
+            const pu = parseFloat(document.getElementById('t-pu').value) || 0;
+            const total = qte * pu;
+            document.getElementById('t-total').value = total.toFixed(2);
+        }
+
+        async function saveTransport(e) {
+            e.preventDefault();
+            const qte = parseFloat(document.getElementById('t-qte').value) || 1;
+            const pu = parseFloat(document.getElementById('t-pu').value) || 0;
+            const t = {
+                date: document.getElementById('t-date').value,
+                type: document.getElementById('t-type').value,
+                chauffeur: document.getElementById('t-chauffeur').value,
+                matricule: document.getElementById('t-matricule').value.trim().toUpperCase(),
+                chantier: document.getElementById('t-chantier').value.trim(),
+                bon: document.getElementById('t-bon').value,
+                trajet: document.getElementById('t-trajet').value.trim(),
+                qte: qte,
+                pu: pu,
+                total: qte * pu,
+                valide: document.getElementById('t-valide').checked
+            };
+            const docRef = await addDoc(collection(window.db, "transport"), t);
+            appState.transport.push({ id: docRef.id, ...t });
+            closeTransportModal();
+            updateTransportDropdowns();
+            renderTransportTable();
+        }
+
+        function updateTransportDropdowns() {
+            const selChantier = document.getElementById('filtre-t-chantier');
+            const selMatricule = document.getElementById('filtre-t-matricule');
+            if(!selChantier || !selMatricule) return;
+
+            const curChantier = selChantier.value;
+            const curMatricule = selMatricule.value;
+
+            const chantiersSet = new Set();
+            const matriculesSet = new Set();
+
+            appState.transport.forEach(t => {
+                if(t.chantier) chantiersSet.add(t.chantier);
+                if(t.matricule) matriculesSet.add(t.matricule);
+            });
+
+            selChantier.innerHTML = '<option value="">Tous les chantiers</option>';
+            chantiersSet.forEach(c => selChantier.innerHTML += `<option value="${c}">${c}</option>`);
+            selChantier.value = curChantier;
+
+            selMatricule.innerHTML = '<option value="">Tous les matricules</option>';
+            matriculesSet.forEach(m => selMatricule.innerHTML += `<option value="${m}">${m}</option>`);
+            selMatricule.value = curMatricule;
+        }
+
+        function renderTransportTable() {
+            const tbody = document.getElementById('table-transport-body');
+            tbody.innerHTML = '';
+
+            const fChantier = document.getElementById('filtre-t-chantier').value;
+            const fMatricule = document.getElementById('filtre-t-matricule').value;
+            const fTrajet = document.getElementById('filtre-t-trajet').value.toLowerCase();
+            const fDate = document.getElementById('filtre-t-date').value;
+
+            const filtered = appState.transport.filter(t => {
+                if(fChantier && t.chantier !== fChantier) return false;
+                if(fMatricule && t.matricule !== fMatricule) return false;
+                if(fTrajet && t.trajet && !t.trajet.toLowerCase().includes(fTrajet)) return false;
+                if(fDate && t.date !== fDate) return false;
+                return true;
+            });
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-slate-400">Aucun enregistrement trouvé</td></tr>`;
+                document.getElementById('total-global-transport').innerText = '0.00 Dhs';
+                return;
+            }
+
+            let grandTotal = 0;
+
+            filtered.forEach(t => {
+                let ligneTotal = t.total !== undefined ? t.total : (t.voyages || t.qte || 1) * (t.pu || 0);
+                grandTotal += ligneTotal;
+
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 text-xs">${t.date}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
+                    <td class="py-3 px-4 font-bold">${t.chauffeur}</td>
+                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
+                    <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
+                    <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
+                    <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
+                    <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
+                    <td class="py-3 px-4 text-right font-bold text-emerald-700">${ligneTotal.toFixed(2)} Dhs</td>
+                    <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
+                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteTransport('${t.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+
+            document.getElementById('total-global-transport').innerText = `${grandTotal.toFixed(2)} Dhs`;
+        }
+
+        async function deleteTransport(id) { 
+            await deleteDoc(doc(window.db, "transport", id));
+            appState.transport = appState.transport.filter(t => t.id !== id); 
+            updateTransportDropdowns();
+            renderTransportTable(); 
+        }
+
+        // EFFETS LOGIC
+        function openEffetModal() { document.getElementById('modal-effet').classList.remove('hidden'); document.getElementById('modal-effet').classList.add('flex'); }
+        function closeEffetModal() { document.getElementById('modal-effet').classList.add('hidden'); document.getElementById('modal-effet').classList.remove('flex'); }
+        
+        function toggleEffetDateModal() {
+            let statut = document.getElementById('e-statut').value;
+            let group = document.getElementById('e-effetDateGroup');
+            group.style.display = (statut === 'Effet Reporté') ? 'block' : 'none';
+        }
+
+        async function saveEffet(e) {
+            e.preventDefault();
+            const scanInput = document.getElementById('e-scan');
+            let scanData = '';
+            if(scanInput.files && scanInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = async function(uploadEvent) {
+                    scanData = uploadEvent.target.result;
+                    await submitEffetData(scanData);
+                };
+                reader.readAsDataURL(scanInput.files[0]);
+            } else {
+                await submitEffetData('');
+            }
+        }
+
+        async function submitEffetData(scanData) {
+            let statutVal = document.getElementById('e-statut').value;
+            let effetDateVal = document.getElementById('e-effetDate').value;
+            const eff = {
+                type: document.getElementById('e-type').value,
+                numero: document.getElementById('e-numero').value,
+                montant: parseFloat(document.getElementById('e-montant').value) || 0,
+                beneficiaire: document.getElementById('e-beneficiaire').value,
+                serviceType: document.getElementById('e-serviceType').value,
+                banque: document.getElementById('e-banque').value,
+                echeance: document.getElementById('e-echeance').value,
+                statut: statutVal,
+                effetDate: (statutVal === 'Effet Reporté') ? effetDateVal : null,
+                scan: scanData
+            };
+            const docRef = await addDoc(collection(window.db, "effets"), eff);
+            appState.effets.push({ id: docRef.id, ...eff });
+            closeEffetModal();
+            renderEffetsTable();
+        }
+
+        function renderEffetsTable() {
+            const tbody = document.getElementById('table-effets-body');
+            tbody.innerHTML = '';
+            const fType = document.getElementById('filtre-type').value;
+            const fBanque = document.getElementById('filtre-banque').value;
+            const fBenef = document.getElementById('filtre-beneficiaire').value.toLowerCase();
+            const fDate = document.getElementById('filtre-date').value;
+
+            const filtered = appState.effets.filter(e => {
+                if(fType && e.type !== fType) return false;
+                if(fBanque && e.banque !== fBanque) return false;
+                if(fBenef && !e.beneficiaire.toLowerCase().includes(fBenef)) return false;
+                if(fDate && e.echeance !== fDate) return false;
+                return true;
+            });
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-slate-400">Aucun effet trouvé</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(e => {
+                let scanBadge = e.scan ? `<a href="${e.scan}" target="_blank" class="text-blue-600 underline font-semibold text-xs">Voir Scan</a>` : '<span class="text-slate-400">Aucun</span>';
+                let effetDateText = (e.statut === 'Effet Reporté' && e.effetDate) ? `<br><span class="text-xs text-amber-600 font-bold">Reporté au: ${e.effetDate}</span>` : '';
+                
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
+                    <td class="py-3 px-4 font-bold">${e.numero}</td>
+                    <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
+                    <td class="py-3 px-4">${e.serviceType || '-'}</td>
+                    <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
+                    <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
+                    <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
+                    <td class="py-3 px-4 text-center no-print">${scanBadge}</td>
+                    <td class="py-3 px-4 text-center">
+                        <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
+                            <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
+                            <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
+                            <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
+                            <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
+                            <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteEffet('${e.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+
+        async function updateEffetStatut(id, newStatut) {
+            await setDoc(doc(window.db, "effets", id), { statut: newStatut }, { merge: true });
+            const item = appState.effets.find(e => e.id === id);
+            if(item) item.statut = newStatut;
+        }
+
+        async function deleteEffet(id) { 
+            await deleteDoc(doc(window.db, "effets", id));
+            appState.effets = appState.effets.filter(e => e.id !== id); 
+            renderEffetsTable(); 
+        }
+
+        // STOCK LOGIC
+        function updateStockDropdowns() {
+            const selectAchat = document.getElementById('st-ac-article');
+            const selectSortie = document.getElementById('st-so-article');
+            if(!selectAchat || !selectSortie) return;
+            selectAchat.innerHTML = '<option value="">Sélectionner un article</option>';
+            selectSortie.innerHTML = '<option value="">Sélectionner un article</option>';
+            appState.stockArticles.forEach(art => {
+                selectAchat.innerHTML += `<option value="${art.id}">${art.ref} - ${art.nom}</option>`;
+                selectSortie.innerHTML += `<option value="${art.id}">${art.ref} - ${art.nom}</option>`;
+            });
+        }
+
+        function openNewArticleModal() { document.getElementById('modal-stock-article').classList.remove('hidden'); document.getElementById('modal-stock-article').classList.add('flex'); }
+        function closeStockArticleModal() { document.getElementById('modal-stock-article').classList.add('hidden'); document.getElementById('modal-stock-article').classList.remove('flex'); }
+
+        function openAchatModal(preselectedArtId = '') {
+            document.getElementById('modal-stock-achat').classList.remove('hidden');
+            document.getElementById('modal-stock-achat').classList.add('flex');
+            if(preselectedArtId) document.getElementById('st-ac-article').value = preselectedArtId;
+        }
+        function closeAchatModal() { document.getElementById('modal-stock-achat').classList.add('hidden'); document.getElementById('modal-stock-achat').classList.remove('flex'); }
+
+        function openSortieModal() { document.getElementById('modal-stock-sortie').classList.remove('hidden'); document.getElementById('modal-stock-sortie').classList.add('flex'); }
+        function closeSortieModal() { document.getElementById('modal-stock-sortie').classList.add('hidden'); document.getElementById('modal-stock-sortie').classList.remove('flex'); }
+
+        async function saveStockArticle(e) {
+            e.preventDefault();
+            const art = {
+                ref: document.getElementById('st-art-ref').value.trim().toUpperCase(),
+                nom: document.getElementById('st-art-nom').value.trim(),
+                seuil: parseInt(document.getElementById('st-art-seuil').value) || 0
+            };
+            const docRef = await addDoc(collection(window.db, "stock_articles"), art);
+            appState.stockArticles.push({ id: docRef.id, ...art });
+            closeStockArticleModal();
+            updateStockDropdowns();
+            renderStockInventoryTable();
+            renderAlertesTable();
+        }
+
+        async function saveStockAchat(e) {
+            e.preventDefault();
+            const achat = {
+                date: document.getElementById('st-ac-date').value,
+                articleId: document.getElementById('st-ac-article').value,
+                quantite: parseInt(document.getElementById('st-ac-qte').value) || 0,
+                prix: parseFloat(document.getElementById('st-ac-prix').value) || 0,
+                fournisseur: document.getElementById('st-ac-fournisseur').value.trim(),
+                bl: document.getElementById('st-ac-bl').value || '-'
+            };
+            const docRef = await addDoc(collection(window.db, "stock_achats"), achat);
+            appState.stockAchats.push({ id: docRef.id, ...achat });
+            closeAchatModal();
+            renderStockInventoryTable();
+            renderAchatsTable();
+            renderAlertesTable();
+        }
+
+        async function saveStockSortie(e) {
+            e.preventDefault();
+            const artId = document.getElementById('st-so-article').value;
+            const qteSortie = parseInt(document.getElementById('st-so-qte').value) || 0;
+
+            let totalAchete = appState.stockAchats.filter(a => a.articleId === artId).reduce((sum, a) => sum + a.quantite, 0);
+            let totalSorti = appState.stockSorties.filter(s => s.articleId === artId).reduce((sum, s) => sum + s.quantite, 0);
+            let resteActuel = totalAchete - totalSorti;
+
+            if(qteSortie > resteActuel) {
+                alert(`Attention: Quantité insuffisante en stock! Reste disponible: ${resteActuel}`);
+            }
+
+            const sortie = {
+                date: document.getElementById('st-so-date').value,
+                articleId: artId,
+                quantite: qteSortie,
+                lieu: document.getElementById('st-so-lieu').value.trim(),
+                preneur: document.getElementById('st-so-preneur').value || '-',
+                chantier: document.getElementById('st-so-chantier').value || '-'
+            };
+            const docRef = await addDoc(collection(window.db, "stock_sorties"), sortie);
+            appState.stockSorties.push({ id: docRef.id, ...sortie });
+            closeSortieModal();
+            renderStockInventoryTable();
+            renderSortiesTable();
+            renderAlertesTable();
+        }
+
+        async function deleteStockArticle(artId) {
+            if(!confirm("Êtes-vous sûr de vouloir supprimer cet article du stock ?")) return;
+            try {
+                await deleteDoc(doc(window.db, "stock_articles", artId));
+                appState.stockArticles = appState.stockArticles.filter(a => a.id !== artId);
+                renderStockInventoryTable();
+                updateStockDropdowns();
+                renderAlertesTable();
+            } catch (err) {
+                alert("Erreur lors de la suppression");
+            }
+        }
+
+        function renderStockInventoryTable() {
+            const tbody = document.getElementById('table-stock-inventory-body');
+            tbody.innerHTML = '';
+            document.getElementById('count-articles').innerText = appState.stockArticles.length;
+
+            const filtreTexte = document.getElementById('filtre-stock-recherche') ? document.getElementById('filtre-stock-recherche').value.toLowerCase() : '';
+            const filtreEtat = document.getElementById('filtre-stock-etat') ? document.getElementById('filtre-stock-etat').value : '';
+
+            const filteredArticles = appState.stockArticles.filter(art => {
+                let matchText = art.ref.toLowerCase().includes(filtreTexte) || art.nom.toLowerCase().includes(filtreTexte);
+                if(!matchText) return false;
+
+                let totalAchats = appState.stockAchats.filter(a => a.articleId === art.id).reduce((sum, a) => sum + a.quantite, 0);
+                let totalSorties = appState.stockSorties.filter(s => s.articleId === art.id).reduce((sum, s) => sum + s.quantite, 0);
+                let reste = totalAchats - totalSorties;
+                let isAlerte = reste <= art.seuil;
+
+                if(filtreEtat === 'alerte' && !isAlerte) return false;
+                if(filtreEtat === 'ok' && isAlerte) return false;
+
+                return true;
+            });
+
+            if(filteredArticles.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucun article trouvé</td></tr>`;
+                return;
+            }
+
+            filteredArticles.forEach(art => {
+                let totalAchats = appState.stockAchats.filter(a => a.articleId === art.id).reduce((sum, a) => sum + a.quantite, 0);
+                let totalSorties = appState.stockSorties.filter(s => s.articleId === art.id).reduce((sum, s) => sum + s.quantite, 0);
+                let reste = totalAchats - totalSorties;
+
+                let isAlerte = reste <= art.seuil;
+                let resteBadge = isAlerte ? 
+                    `<span class="px-2.5 py-1 rounded-lg text-xs bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${reste} (Alerte!)</span>` : 
+                    `<span class="px-2.5 py-1 rounded-lg text-xs bg-emerald-100 text-emerald-800 font-bold">${reste}</span>`;
+
+                let actionBtn = isAlerte ? 
+                    `<button onclick="openAchatModal('${art.id}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs"><i class="fa-solid fa-cart-shopping"></i> Commande</button>` :
+                    `<span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> OK</span>`;
+
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                    <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
+                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
+                    <td class="py-3 px-4 text-center">${resteBadge}</td>
+                    <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
+                    <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
+                        ${actionBtn}
+                        <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        function renderAchatsTable() {
+            const tbody = document.getElementById('table-achats-body');
+            tbody.innerHTML = '';
+            if(appState.stockAchats.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucun achat enregistré</td></tr>`;
+                return;
+            }
+            appState.stockAchats.forEach(ac => {
+                let art = appState.stockArticles.find(a => a.id === ac.articleId);
+                let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
+                    <td class="py-3 px-4 font-bold">${artNom}</td>
+                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
+                    <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
+                    <td class="py-3 px-4">${ac.fournisseur}</td>
+                    <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
+                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+
+        async function deleteStockAchat(id) {
+            await deleteDoc(doc(window.db, "stock_achats", id));
+            appState.stockAchats = appState.stockAchats.filter(a => a.id !== id);
+            renderStockInventoryTable();
+            renderAchatsTable();
+            renderAlertesTable();
+        }
+
+        function renderSortiesTable() {
+            const tbody = document.getElementById('table-sorties-body');
+            tbody.innerHTML = '';
+            if(appState.stockSorties.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucune sortie enregistrée</td></tr>`;
+                return;
+            }
+            appState.stockSorties.forEach(so => {
+                let art = appState.stockArticles.find(a => a.id === so.articleId);
+                let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
+                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
+                    <td class="py-3 px-4 font-bold">${artNom}</td>
+                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
+                    <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
+                    <td class="py-3 px-4 text-xs">${so.preneur}</td>
+                    <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
+                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
+            });
+        }
+
+        async function deleteStockSortie(id) {
+            await deleteDoc(doc(window.db, "stock_sorties", id));
+            appState.stockSorties = appState.stockSorties.filter(s => s.id !== id);
+            renderStockInventoryTable();
+            renderSortiesTable();
+            renderAlertesTable();
+        }
+
+        function renderAlertesTable() {
+            const tbody = document.getElementById('table-alertes-body');
+            tbody.innerHTML = '';
+            let alertesCount = 0;
+
+            appState.stockArticles.forEach(art => {
+                let totalAchats = appState.stockAchats.filter(a => a.articleId === art.id).reduce((sum, a) => sum + a.quantite, 0);
+                let totalSorties = appState.stockSorties.filter(s => s.articleId === art.id).reduce((sum, s) => sum + s.quantite, 0);
+                let reste = totalAchats - totalSorties;
+
+                if(reste <= art.seuil) {
+                    alertesCount++;
+                    let achatsArticle = appState.stockAchats.filter(a => a.articleId === art.id);
+                    let meilleurFournisseur = achatsArticle.length > 0 ? achatsArticle[achatsArticle.length - 1].fournisseur : 'Aucun historique';
+
+                    tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                        <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                        <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
+                        <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
+                        <td class="py-3 px-4 text-center no-print">
+                            <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
+                                <i class="fa-solid fa-cart-plus"></i> Commander
+                            </button>
+                        </td>
+                    </tr>`;
+                }
+            });
+
+            document.getElementById('count-alertes').innerText = alertesCount;
+            if(alertesCount === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-medium">Aucun article en alerte de stock. Tout va bien !</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

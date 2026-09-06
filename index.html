@@ -39,6 +39,7 @@
         window.setDoc = setDoc;
         window.query = query;
         window.where = where;
+        window.updateDoc = updateDoc;
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedUser = localStorage.getItem('somlako_user');
@@ -193,9 +194,28 @@
 
                 <!-- SUB 1.1 -->
                 <div id="subview-salaries" class="bg-white rounded-2xl border p-6">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
                         <h3 class="text-lg font-bold">Liste du Personnel</h3>
-                        <button onclick="openSalarieModal()" class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl">Ajouter Employé</button>
+
+                        <div class="flex items-center gap-3">
+                            <!-- Filtre par nom -->
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+
+                                <input type="text"
+                                       id="filtre-salarie-nom"
+                                       oninput="renderSalariesTable()"
+                                       placeholder="Rechercher par nom..."
+                                       class="w-64 pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm
+                       bg-slate-50 focus:bg-white focus:outline-none
+                       focus:ring-2 focus:ring-blue-500">
+                            </div>
+
+                            <button onclick="openSalarieModal()"
+                                    class="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl">
+                                Ajouter Employé
+                            </button>
+                        </div>
                     </div>
                     <table class="w-full text-left">
                         <thead>
@@ -653,15 +673,63 @@
     <div id="print-section-area"></div>
 
     <!-- MODALS SECTION -->
-    <!-- Salarié Modal -->
-    <div id="modal-salarie" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+ 
+    <div id="modal-salarie"
+         class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold mb-4">Ajouter Employé</h3>
+
+            <h3 id="salarie-modal-title" class="text-lg font-bold mb-4">
+                Ajouter Employé
+            </h3>
+
             <form onsubmit="saveSalarie(event)" class="space-y-4">
-                <input type="text" id="s-nom" required placeholder="Nom complet" class="w-full p-2.5 border rounded-xl text-sm">
-                <input type="text" id="s-fonction" required placeholder="Fonction" class="w-full p-2.5 border rounded-xl text-sm">
-                <input type="number" step="0.5" id="s-taux-hs" value="25" placeholder="Taux heure sup" class="w-full p-2.5 border rounded-xl text-sm">
-                <input type="number" id="s-panier" value="30" placeholder="Panier par défaut" class="w-full p-2.5 border rounded-xl text-sm">
+
+                <input type="hidden" id="s-id">
+
+                <div>
+                    <label for="s-nom" class="block text-xs font-semibold mb-1 text-slate-600">
+                        Nom complet
+                    </label>
+                    <input type="text"
+                           id="s-nom"
+                           required
+                           placeholder="Nom complet"
+                           class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div>
+                    <label for="s-fonction" class="block text-xs font-semibold mb-1 text-slate-600">
+                        Fonction
+                    </label>
+                    <input type="text"
+                           id="s-fonction"
+                           required
+                           placeholder="Fonction"
+                           class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div>
+                    <label for="s-taux-hs" class="block text-xs font-semibold mb-1 text-slate-600">
+                        Taux heure supplémentaire (Dhs)
+                    </label>
+                    <input type="number"
+                           step="0.5"
+                           id="s-taux-hs"
+                           value="25"
+                           placeholder="Taux heure sup"
+                           class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+
+                <div>
+                    <label for="s-panier" class="block text-xs font-semibold mb-1 text-slate-600">
+                        Panier par défaut (Dhs)
+                    </label>
+                    <input type="number"
+                           id="s-panier"
+                           value="30"
+                           placeholder="Panier par défaut"
+                           class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeSalarieModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm">Enregistrer</button>
@@ -1121,30 +1189,158 @@
         
         async function saveSalarie(e) {
             e.preventDefault();
-            const nom = document.getElementById('s-nom').value;
-            const fonction = document.getElementById('s-fonction').value;
-            const tauxHs = parseFloat(document.getElementById('s-taux-hs').value) || 0;
-            const panier = parseFloat(document.getElementById('s-panier').value) || 0;
-            
+
+            const id = document.getElementById('s-id').value;
+            const nom = document.getElementById('s-nom').value.trim();
+            const fonction = document.getElementById('s-fonction').value.trim();
+            const tauxHs = parseFloat(
+                document.getElementById('s-taux-hs').value
+            ) || 0;
+
+            const panier = parseFloat(
+                document.getElementById('s-panier').value
+            ) || 0;
+
             try {
-                const docRef = await addDoc(collection(window.db, "salaries"), { nom, fonction, tauxHs, panier });
-                appState.salaries.push({ id: docRef.id, nom, fonction, tauxHs, panier });
+
+                // =========================
+                // MODIFICATION
+                // =========================
+                if (id) {
+
+                    await window.updateDoc(
+                        window.doc(window.db, "salaries", id),
+                        {
+                            nom,
+                            fonction,
+                            tauxHs,
+                            panier
+                        }
+                    );
+
+                    const index = appState.salaries.findIndex(
+                        s => s.id === id
+                    );
+
+                    if (index !== -1) {
+                        appState.salaries[index] = {
+                            id,
+                            nom,
+                            fonction,
+                            tauxHs,
+                            panier
+                        };
+                    }
+
+                }
+
+                // =========================
+                // AJOUT
+                // =========================
+                else {
+
+                    const docRef = await addDoc(
+                        collection(window.db, "salaries"),
+                        {
+                            nom,
+                            fonction,
+                            tauxHs,
+                            panier
+                        }
+                    );
+
+                    appState.salaries.push({
+                        id: docRef.id,
+                        nom,
+                        fonction,
+                        tauxHs,
+                        panier
+                    });
+                }
+
                 closeSalarieModal();
+
                 renderSalariesTable();
                 updateSalariesDropdown();
-                document.getElementById('s-nom').value = '';
-                document.getElementById('s-fonction').value = '';
-            } catch(err) {
+
+            } catch (err) {
+                console.error(err);
                 alert("Erreur lors de l'enregistrement");
             }
         }
 
         function renderSalariesTable() {
             const tbody = document.getElementById('table-salaries-body');
-            tbody.innerHTML = appState.salaries.length ? '' : `<tr><td colspan="5" class="text-center py-4 text-slate-400">Aucune donnée disponible</td></tr>`;
-            document.getElementById('count-salaries').innerText = appState.salaries.length;
-            appState.salaries.forEach(s => {
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-3 px-4 font-bold">${s.nom}</td><td class="py-3 px-4">${s.fonction}</td><td class="py-3 px-4">${s.tauxHs} Dhs</td><td class="py-3 px-4">${s.panier} Dhs</td><td class="py-3 px-4 text-right"><button onclick="deleteSalarie('${s.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+
+            // Récupérer le texte saisi dans le filtre
+            const searchInput = document.getElementById('filtre-salarie-nom');
+            const recherche = searchInput
+                ? searchInput.value.trim().toLowerCase()
+                : '';
+
+            // Filtrer les salariés par nom
+            const salariesFiltres = appState.salaries.filter(s => {
+                return (s.nom || '').toLowerCase().includes(recherche);
+            });
+
+            // Nombre total d'employés
+            document.getElementById('count-salaries').innerText =
+                appState.salaries.length;
+
+            // Aucun résultat
+            if (salariesFiltres.length === 0) {
+                tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-6 text-slate-400">
+                    ${recherche
+                        ? 'Aucun employé trouvé pour cette recherche'
+                        : 'Aucune donnée disponible'
+                    }
+                </td>
+            </tr>
+        `;
+                return;
+            }
+
+            // Affichage des employés filtrés
+            tbody.innerHTML = '';
+
+            salariesFiltres.forEach(s => {
+                tbody.innerHTML += `
+            <tr class="hover:bg-slate-50">
+                <td class="py-3 px-4 font-bold">${s.nom}</td>
+
+                <td class="py-3 px-4">
+                    ${s.fonction}
+                </td>
+
+                <td class="py-3 px-4">
+                    ${s.tauxHs} Dhs
+                </td>
+
+                <td class="py-3 px-4">
+                    ${s.panier} Dhs
+                </td>
+
+                <td class="py-3 px-4 text-right">
+                    <div class="flex items-center justify-end gap-3">
+                        <button
+                            onclick="editSalarie('${s.id}')"
+                            class="text-blue-600 hover:text-blue-800"
+                            title="Modifier">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button
+                            onclick="deleteSalarie('${s.id}')"
+                            class="text-rose-600 hover:text-rose-800"
+                            title="Supprimer">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+
+                    </div>
+                </td>
+            </tr>
+            `;
             });
         }
 
@@ -1154,6 +1350,46 @@
             renderSalariesTable();
             updateSalariesDropdown();
         }
+
+        function editSalarie(id) {
+            const salarie = appState.salaries.find(s => s.id === id);
+
+            if (!salarie) return;
+
+            // Remplir le formulaire
+            document.getElementById('s-id').value = salarie.id;
+            document.getElementById('s-nom').value = salarie.nom;
+            document.getElementById('s-fonction').value = salarie.fonction;
+            document.getElementById('s-taux-hs').value = salarie.tauxHs;
+            document.getElementById('s-panier').value = salarie.panier;
+
+            // Changer le titre
+            document.getElementById('salarie-modal-title').innerText =
+                'Modifier Employé';
+
+            // Ouvrir le modal
+            const modal = document.getElementById('modal-salarie');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function openSalarieModal() {
+
+            // Mode ajout
+            document.getElementById('s-id').value = '';
+            document.getElementById('s-nom').value = '';
+            document.getElementById('s-fonction').value = '';
+            document.getElementById('s-taux-hs').value = 25;
+            document.getElementById('s-panier').value = 30;
+
+            document.getElementById('salarie-modal-title').innerText =
+                'Ajouter Employé';
+
+            const modal = document.getElementById('modal-salarie');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
 
         function updateSalariesDropdown() {
             const sel = document.getElementById('p-salarie');

@@ -387,9 +387,9 @@
                     <!-- Filtres Module 2 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 no-print">
                         <div>
-                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Chantier</label>
+                            <label class="block text-xs font-semibold mb-1 text-slate-600">Filtrer par Titulaire</label>
                             <select id="filtre-t-chantier" onchange="renderTransportTable()" class="w-full p-2 bg-white border rounded-lg text-sm">
-                                <option value="">Tous les chantiers</option>
+                                <option value="">Tous les titulaires</option>
                             </select>
                         </div>
                         <div>
@@ -416,25 +416,33 @@
                                     <th class="py-3 px-4">Type</th>
                                     <th class="py-3 px-4">Chauffeur</th>
                                     <th class="py-3 px-4">Matricule</th>
-                                    <th class="py-3 px-4">Chantier</th>
-                                    <th class="py-3 px-4">Bon / Ref</th>
+                                    <th class="py-3 px-4">Titulaire</th>
+                                    <th class="py-3 px-4">N° Bon</th>
+                                    <th class="py-3 px-4">Référence</th>
                                     <th class="py-3 px-4">Trajet (De ➔ À)</th>
-                                    <th class="py-3 px-4 text-center">Quantité</th>
-                                    <th class="py-3 px-4 text-right">Prix Unitaire</th>
+                                    <th class="py-3 px-4 text-center">Nombre de trajets</th>
+                                    <th class="py-3 px-4 text-right">Prix / trajet</th>
                                     <th class="py-3 px-4 text-right font-bold text-slate-900">Montant Total</th>
                                     <th class="py-3 px-4 text-center">Validation</th>
                                     <th class="py-3 px-4 text-right no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="table-transport-body" class="divide-y text-sm"></tbody>
-                            <tfoot class="bg-slate-100 font-bold border-t-2 border-slate-300">
-                                <tr>
-                                    <td colspan="9" class="py-4 px-4 text-right text-slate-800">TOTAL GÉNÉRAL :</td>
-                                    <td class="py-4 px-4 text-right text-emerald-600 text-lg" id="total-global-transport">0.00 Dhs</td>
-                                    <td colspan="2" class="py-4 px-4"></td>
-                                </tr>
-                            </tfoot>
                         </table>
+                        <div class="flex justify-end mt-5 no-print">
+                            <div class="bg-slate-50 border border-slate-200
+                                rounded-xl px-6 py-4 min-w-[300px]">
+                                <div class="flex items-center justify-between gap-8">
+                                    <span class="text-sm font-bold text-slate-600 uppercase">
+                                        Montant global
+                                    </span>
+                                    <span id="total-global-transport"
+                                          class="text-xl font-bold text-emerald-700">
+                                        0.00 Dhs
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -503,13 +511,29 @@
                                     <th class="py-3 px-4">Banque</th>
                                     <th class="py-3 px-4">Échéance</th>
                                     <th class="py-3 px-4 text-right">Montant</th>
-                                    <th class="py-3 px-4 text-center no-print">Scan</th>
                                     <th class="py-3 px-4 text-center">Statut</th>
                                     <th class="py-3 px-4 text-right no-print">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="table-effets-body" class="divide-y text-sm"></tbody>
                         </table>
+                    </div>
+                    <!-- TOTAL DES MONTANTS -->
+                    <div class="flex justify-end mt-5">
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 min-w-[280px]">
+
+                            <div class="flex items-center justify-between gap-8">
+                                <span class="text-sm font-bold text-slate-600 uppercase">
+                                    Montant Total
+                                </span>
+
+                                <span id="total-effets"
+                                      class="text-xl font-bold text-blue-700">
+                                    0 Dhs
+                                </span>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             </div>
@@ -772,8 +796,11 @@
     <!-- Transport Modal -->
     <div id="modal-transport" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
-            <h3 class="text-lg font-bold mb-4">Ajouter Voyage, Avance ou Gasoil</h3>
+            <h3 id="transport-modal-title" class="text-lg font-bold mb-4">
+                Ajouter Voyage, Avance ou Gasoil
+            </h3>
             <form onsubmit="saveTransport(event)" class="space-y-4">
+                <input type="hidden" id="t-id">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold mb-1">Date</label>
@@ -781,16 +808,17 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold mb-1">Type</label>
-                        <select id="t-type" class="w-full p-2.5 border rounded-xl text-sm font-bold text-emerald-700">
+                        <select id="t-type"
+                                onchange="updateTransportFormByType()"
+                                class="w-full p-2.5 border rounded-xl text-sm font-bold text-emerald-700">
                             <option value="Voyage">Voyage de Transport</option>
-                            <option value="Avance">Avance Chauffeur</option>
                             <option value="Gasoil">Gasoil</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
+                    <div id="group-t-chauffeur">
                         <label class="block text-xs font-semibold mb-1">Chauffeur</label>
                         <input type="text" id="t-chauffeur" required placeholder="Nom du chauffeur" class="w-full p-2.5 border rounded-xl text-sm">
                     </div>
@@ -801,28 +829,32 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold mb-1">Chantier</label>
-                        <input type="text" id="t-chantier" required placeholder="Nom du chantier" class="w-full p-2.5 border rounded-xl text-sm">
+                    <div id="group-t-titulaire">
+                        <label class="block text-xs font-semibold mb-1">Titulaire</label>
+                        <input type="text" id="t-chantier" required placeholder="Titulaire" class="w-full p-2.5 border rounded-xl text-sm">
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold mb-1">Bon / Référence</label>
-                        <input type="text" id="t-bon" placeholder="N° Bon ou Réf" class="w-full p-2.5 border rounded-xl text-sm">
+                    <div id="group-t-bon">
+                        <label class="block text-xs font-semibold mb-1">N° Bon </label>
+                        <input type="text" id="t-bon" placeholder="N° Bon" class="w-full p-2.5 border rounded-xl text-sm">
+                    </div>
+                    <div id="group-t-reference">
+                        <label class="block text-xs font-semibold mb-1">Référence</label>
+                        <input type="text" id="t-reference" placeholder="Référence" class="w-full p-2.5 border rounded-xl text-sm">
                     </div>
                 </div>
 
-                <div>
+                <div id="group-t-trajet">
                     <label class="block text-xs font-semibold mb-1">Trajet (De ➔ À)</label>
                     <input type="text" id="t-trajet" placeholder="Ex: DEPOT CHAMAIA ➔ ROUTE GZOULA" class="w-full p-2.5 border rounded-xl text-sm font-semibold">
                 </div>
 
                 <div class="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-xl border">
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Quantité</label>
+                        <label id="label-t-qte" class="block text-xs font-semibold mb-1">Nombre de trajets</label>
                         <input type="number" step="0.01" id="t-qte" value="1" oninput="calculateTransportTotal()" class="w-full p-2 border rounded-lg text-sm font-bold text-center">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1">Prix Unitaire</label>
+                        <label id="label-t-pu" class="block text-xs font-semibold mb-1">Prix / trajet (Dhs)</label>
                         <input type="number" step="0.01" id="t-pu" value="0" oninput="calculateTransportTotal()" class="w-full p-2 border rounded-lg text-sm font-bold text-center">
                     </div>
                     <div>
@@ -847,8 +879,11 @@
     <!-- Effet Modal -->
     <div id="modal-effet" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
-            <h3 class="text-lg font-bold mb-4">Ajouter Chèque / Lettre de Change</h3>
+            <h3 id="effet-modal-title" class="text-lg font-bold mb-4">
+                Ajouter Chèque / Lettre de Change
+            </h3>
             <form onsubmit="saveEffet(event)" class="space-y-4">
+                <input type="hidden" id="e-id">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold mb-1">Type</label>
@@ -934,8 +969,11 @@
     <!-- Modal 1: Nouvel Article -->
     <div id="modal-stock-article" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h3 class="text-lg font-bold mb-4">Créer un Nouvel Article en Stock</h3>
+            <h3 id="stock-article-modal-title" class="text-lg font-bold mb-4">
+                Créer un Nouvel Article en Stock
+            </h3>
             <form onsubmit="saveStockArticle(event)" class="space-y-4">
+                <input type="hidden" id="st-art-id">
                 <div>
                     <label class="block text-xs font-semibold mb-1">Référence Article (Code)</label>
                     <input type="text" id="st-art-ref" required placeholder="Ex: PIECE-001" class="w-full p-2.5 border rounded-xl text-sm font-mono font-bold">
@@ -950,7 +988,7 @@
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeStockArticleModal()" class="px-4 py-2 bg-slate-100 rounded-xl text-sm">Annuler</button>
-                    <button type="submit" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Créer Article</button>
+                    <button type="submit" id="stock-article-submit-btn" class="px-4 py-2 bg-amber-600 text-white rounded-xl text-sm">Créer Article</button>
                 </div>
             </form>
         </div>
@@ -1743,11 +1781,70 @@
         }
 
         // TRANSPORT LOGIC
-        function openTransportModal() { 
-            document.getElementById('modal-transport').classList.remove('hidden'); 
-            document.getElementById('modal-transport').classList.add('flex'); 
+        function editTransport(id) {
+
+            const t = appState.transport.find(item => item.id === id);
+
+            if (!t) return;
+
+            // ID Firebase
+            document.getElementById('t-id').value = t.id;
+
+            // Remplir les champs
+            document.getElementById('t-date').value = t.date || '';
+            document.getElementById('t-type').value = t.type || 'Voyage';
+            document.getElementById('t-chauffeur').value = t.chauffeur || '';
+            document.getElementById('t-matricule').value = t.matricule || '';
+            document.getElementById('t-chantier').value = t.chantier || '';
+            document.getElementById('t-bon').value = t.bon || '';
+            document.getElementById('t-reference').value = t.reference || '';
+            document.getElementById('t-trajet').value = t.trajet || '';
+            document.getElementById('t-qte').value = t.qte || t.voyages || 1;
+            document.getElementById('t-pu').value = t.pu || 0;
+            document.getElementById('t-valide').checked = t.valide || false;
+
+            // Recalculer le total
             calculateTransportTotal();
+
+            // Changer le titre
+            document.getElementById('transport-modal-title').innerText =
+                'Modifier Voyage / Avance / Gasoil';
+
+            // Ouvrir la modal
+            const modal = document.getElementById('modal-transport');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
+
+        function openTransportModal() {
+
+            // Mode AJOUT
+            document.getElementById('t-id').value = '';
+
+            document.getElementById('t-date').value = '';
+            document.getElementById('t-type').value = 'Voyage';
+            document.getElementById('t-chauffeur').value = '';
+            document.getElementById('t-matricule').value = '';
+            document.getElementById('t-chantier').value = '';
+            document.getElementById('t-bon').value = '';
+            document.getElementById('t-reference').value = '';
+            document.getElementById('t-trajet').value = '';
+            document.getElementById('t-qte').value = '1';
+            document.getElementById('t-pu').value = '0';
+            document.getElementById('t-valide').checked = false;
+
+            document.getElementById('transport-modal-title').innerText =
+                'Ajouter Voyage, Avance ou Gasoil';
+
+            calculateTransportTotal();
+
+            const modal = document.getElementById('modal-transport');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
         function closeTransportModal() { 
             document.getElementById('modal-transport').classList.add('hidden'); 
             document.getElementById('modal-transport').classList.remove('flex'); 
@@ -1761,27 +1858,117 @@
         }
 
         async function saveTransport(e) {
+
             e.preventDefault();
-            const qte = parseFloat(document.getElementById('t-qte').value) || 1;
-            const pu = parseFloat(document.getElementById('t-pu').value) || 0;
+
+            const id = document.getElementById('t-id').value;
+
+            const qte =
+                parseFloat(document.getElementById('t-qte').value) || 1;
+
+            const pu =
+                parseFloat(document.getElementById('t-pu').value) || 0;
+
             const t = {
+
                 date: document.getElementById('t-date').value,
+
                 type: document.getElementById('t-type').value,
-                chauffeur: document.getElementById('t-chauffeur').value,
-                matricule: document.getElementById('t-matricule').value.trim().toUpperCase(),
-                chantier: document.getElementById('t-chantier').value.trim(),
-                bon: document.getElementById('t-bon').value,
-                trajet: document.getElementById('t-trajet').value.trim(),
+
+                chauffeur:
+                    document.getElementById('t-chauffeur').value,
+
+                matricule:
+                    document.getElementById('t-matricule')
+                        .value
+                        .trim()
+                        .toUpperCase(),
+
+                chantier:
+                    document.getElementById('t-chantier')
+                        .value
+                        .trim(),
+
+                bon:
+                    document.getElementById('t-bon').value,
+
+                reference:
+                    document.getElementById('t-reference').value.trim(),
+
+                trajet:
+                    document.getElementById('t-trajet')
+                        .value
+                        .trim(),
+
                 qte: qte,
+
                 pu: pu,
+
                 total: qte * pu,
-                valide: document.getElementById('t-valide').checked
+
+                valide:
+                    document.getElementById('t-valide').checked
             };
-            const docRef = await addDoc(collection(window.db, "transport"), t);
-            appState.transport.push({ id: docRef.id, ...t });
-            closeTransportModal();
-            updateTransportDropdowns();
-            renderTransportTable();
+
+            try {
+
+                // ==========================
+                // MODIFICATION
+                // ==========================
+                if (id) {
+
+                    await window.updateDoc(
+                        window.doc(window.db, "transport", id),
+                        t
+                    );
+
+                    const index =
+                        appState.transport.findIndex(
+                            item => item.id === id
+                        );
+
+                    if (index !== -1) {
+
+                        appState.transport[index] = {
+                            id,
+                            ...t
+                        };
+                    }
+
+                }
+
+                // ==========================
+                // NOUVEL ENREGISTREMENT
+                // ==========================
+                else {
+
+                    const docRef = await addDoc(
+                        collection(window.db, "transport"),
+                        t
+                    );
+
+                    appState.transport.push({
+                        id: docRef.id,
+                        ...t
+                    });
+                }
+
+                // Quitter le mode modification
+                document.getElementById('t-id').value = '';
+
+                closeTransportModal();
+
+                updateTransportDropdowns();
+                renderTransportTable();
+
+            } catch (err) {
+
+                console.error(err);
+
+                alert(
+                    "Erreur lors de l'enregistrement"
+                );
+            }
         }
 
         function updateTransportDropdowns() {
@@ -1800,7 +1987,7 @@
                 if(t.matricule) matriculesSet.add(t.matricule);
             });
 
-            selChantier.innerHTML = '<option value="">Tous les chantiers</option>';
+            selChantier.innerHTML = '<option value="">Tous les titulaires</option>';
             chantiersSet.forEach(c => selChantier.innerHTML += `<option value="${c}">${c}</option>`);
             selChantier.value = curChantier;
 
@@ -1845,12 +2032,31 @@
                     <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
                     <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
                     <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
+                    <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
                     <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
                     <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
                     <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
                     <td class="py-3 px-4 text-right font-bold text-emerald-700">${ligneTotal.toFixed(2)} Dhs</td>
                     <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
-                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteTransport('${t.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                    <td class="py-3 px-4 text-right no-print">
+                        <div class="flex items-center justify-end gap-3">
+
+                            <button
+                                onclick="editTransport('${t.id}')"
+                                class="text-blue-600 hover:text-blue-800"
+                                title="Modifier">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+
+                            <button
+                                onclick="deleteTransport('${t.id}')"
+                                class="text-rose-600 hover:text-rose-800"
+                                title="Supprimer">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+
+                        </div>
+                    </td>
                 </tr>`;
             });
 
@@ -1864,8 +2070,93 @@
             renderTransportTable(); 
         }
 
+        function updateTransportFormByType() {
+
+            const type = document.getElementById('t-type').value;
+
+            const groupChauffeur = document.getElementById('group-t-chauffeur');
+            const groupTitulaire = document.getElementById('group-t-titulaire');
+            const groupBon = document.getElementById('group-t-bon');
+            const groupReference = document.getElementById('group-t-reference');
+            const groupTrajet = document.getElementById('group-t-trajet');
+
+            const labelQte = document.getElementById('label-t-qte');
+            const labelPu = document.getElementById('label-t-pu');
+
+            const inputQte = document.getElementById('t-qte');
+            const inputPu = document.getElementById('t-pu');
+
+
+            // ==============================
+            // GASOIL
+            // ==============================
+            if (type === 'Gasoil') {
+
+                // Cacher les champs inutiles
+                groupChauffeur.style.display = 'none';
+                groupTitulaire.style.display = 'none';
+                groupBon.style.display = 'none';
+                groupReference.style.display = 'none';
+                groupTrajet.style.display = 'none';
+
+                // Adapter les intitulés
+                labelQte.innerText = 'Quantité (litres)';
+                labelPu.innerText = 'Prix / litre (Dhs)';
+
+                inputQte.placeholder = 'Ex : 200';
+                inputPu.placeholder = 'Ex : 14.80';
+            }
+
+
+            // ==============================
+            // VOYAGE
+            // ==============================
+            else {
+
+                // Réafficher tous les champs
+                groupChauffeur.style.display = '';
+                groupTitulaire.style.display = '';
+                groupBon.style.display = '';
+                groupReference.style.display = '';
+                groupTrajet.style.display = '';
+
+                // Intitulés Voyage
+                labelQte.innerText = 'Nombre de trajets';
+                labelPu.innerText = 'Prix / trajet (Dhs)';
+
+                inputQte.placeholder = 'Ex : 1';
+                inputPu.placeholder = 'Ex : 2200';
+            }
+
+            calculateTransportTotal();
+        }
+
         // EFFETS LOGIC
-        function openEffetModal() { document.getElementById('modal-effet').classList.remove('hidden'); document.getElementById('modal-effet').classList.add('flex'); }
+        function openEffetModal() {
+
+            // Mode AJOUT
+            document.getElementById('e-id').value = '';
+
+            document.getElementById('e-type').value = 'Chèque';
+            document.getElementById('e-numero').value = '';
+            document.getElementById('e-montant').value = '';
+            document.getElementById('e-beneficiaire').value = '';
+            document.getElementById('e-serviceType').value = '';
+            document.getElementById('e-echeance').value = '';
+            document.getElementById('e-statut').value = 'En attente';
+            document.getElementById('e-effetDate').value = '';
+     /*       document.getElementById('e-scan').value = '';*/
+
+            document.getElementById('effet-modal-title').innerText =
+                'Ajouter Chèque / Lettre de Change';
+
+            toggleEffetDateModal();
+
+            const modal = document.getElementById('modal-effet');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
         function closeEffetModal() { document.getElementById('modal-effet').classList.add('hidden'); document.getElementById('modal-effet').classList.remove('flex'); }
         
         function toggleEffetDateModal() {
@@ -1891,24 +2182,98 @@
         }
 
         async function submitEffetData(scanData) {
-            let statutVal = document.getElementById('e-statut').value;
-            let effetDateVal = document.getElementById('e-effetDate').value;
+
+            const id = document.getElementById('e-id').value;
+
+            let statutVal =
+                document.getElementById('e-statut').value;
+
+            let effetDateVal =
+                document.getElementById('e-effetDate').value;
+
             const eff = {
                 type: document.getElementById('e-type').value,
                 numero: document.getElementById('e-numero').value,
-                montant: parseFloat(document.getElementById('e-montant').value) || 0,
-                beneficiaire: document.getElementById('e-beneficiaire').value,
-                serviceType: document.getElementById('e-serviceType').value,
-                banque: document.getElementById('e-banque').value,
-                echeance: document.getElementById('e-echeance').value,
+                montant:
+                    parseFloat(document.getElementById('e-montant').value) || 0,
+                beneficiaire:
+                    document.getElementById('e-beneficiaire').value,
+                serviceType:
+                    document.getElementById('e-serviceType').value,
+                banque:
+                    document.getElementById('e-banque').value,
+                echeance:
+                    document.getElementById('e-echeance').value,
                 statut: statutVal,
-                effetDate: (statutVal === 'Effet Reporté') ? effetDateVal : null,
-                scan: scanData
+                effetDate:
+                    statutVal === 'Effet Reporté'
+                        ? effetDateVal
+                        : null
             };
-            const docRef = await addDoc(collection(window.db, "effets"), eff);
-            appState.effets.push({ id: docRef.id, ...eff });
-            closeEffetModal();
-            renderEffetsTable();
+
+            try {
+
+                // ============================
+                // MODIFICATION
+                // ============================
+                if (id) {
+
+                    // Conserver l'ancien scan si aucun nouveau fichier
+                    const ancienEffet =
+                        appState.effets.find(e => e.id === id);
+
+                    eff.scan = scanData ||
+                        (ancienEffet ? ancienEffet.scan : '');
+
+                    await window.updateDoc(
+                        window.doc(window.db, "effets", id),
+                        eff
+                    );
+
+                    const index =
+                        appState.effets.findIndex(e => e.id === id);
+
+                    if (index !== -1) {
+                        appState.effets[index] = {
+                            id,
+                            ...eff
+                        };
+                    }
+
+                }
+
+                // ============================
+                // NOUVEL EFFET
+                // ============================
+                else {
+
+                    eff.scan = scanData;
+
+                    const docRef = await addDoc(
+                        collection(window.db, "effets"),
+                        eff
+                    );
+
+                    appState.effets.push({
+                        id: docRef.id,
+                        ...eff
+                    });
+                }
+
+                // Réinitialiser le mode édition
+                document.getElementById('e-id').value = '';
+
+                closeEffetModal();
+                renderEffetsTable();
+
+            } catch (err) {
+
+                console.error(err);
+
+                alert(
+                    "Erreur lors de l'enregistrement de l'effet"
+                );
+            }
         }
 
         function renderEffetsTable() {
@@ -1927,6 +2292,17 @@
                 return true;
             });
 
+            // =============================
+            // TOTAL DES MONTANTS AFFICHÉS
+            // =============================
+            const totalMontant = filtered.reduce((total, e) => {
+                return total + (parseFloat(e.montant) || 0);
+            }, 0);
+
+            document.getElementById('total-effets').innerText =
+                totalMontant.toLocaleString('fr-FR') + ' Dhs';
+
+
             if(filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-slate-400">Aucun effet trouvé</td></tr>`;
                 return;
@@ -1944,7 +2320,6 @@
                     <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
                     <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
                     <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
-                    <td class="py-3 px-4 text-center no-print">${scanBadge}</td>
                     <td class="py-3 px-4 text-center">
                         <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
                             <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
@@ -1954,9 +2329,64 @@
                             <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
                         </select>
                     </td>
-                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteEffet('${e.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                    <td class="py-3 px-4 text-right no-print">
+                        <div class="flex items-center justify-end gap-3">
+
+                            <button
+                                onclick="editEffet('${e.id}')"
+                                class="text-blue-600 hover:text-blue-800"
+                                title="Modifier">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+
+                            <button
+                                onclick="deleteEffet('${e.id}')"
+                                class="text-rose-600 hover:text-rose-800"
+                                title="Supprimer">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+
+                        </div>
+                    </td>
                 </tr>`;
             });
+        }
+
+        function editEffet(id) {
+
+            const effet = appState.effets.find(e => e.id === id);
+
+            if (!effet) return;
+
+            // ID Firebase
+            document.getElementById('e-id').value = effet.id;
+
+            // Remplir la modal
+            document.getElementById('e-type').value = effet.type || '';
+            document.getElementById('e-numero').value = effet.numero || '';
+            document.getElementById('e-montant').value = effet.montant || 0;
+            document.getElementById('e-beneficiaire').value = effet.beneficiaire || '';
+            document.getElementById('e-serviceType').value = effet.serviceType || '';
+            document.getElementById('e-banque').value = effet.banque || '';
+            document.getElementById('e-echeance').value = effet.echeance || '';
+            document.getElementById('e-statut').value = effet.statut || 'En attente';
+            document.getElementById('e-effetDate').value = effet.effetDate || '';
+
+            // Afficher/cacher la date de report
+            toggleEffetDateModal();
+
+            // Changer le titre
+            const titre = document.getElementById('effet-modal-title');
+
+            if (titre) {
+                titre.innerText = 'Modifier Chèque / Lettre de Change';
+            }
+
+            // Ouvrir la modal
+            const modal = document.getElementById('modal-effet');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         async function updateEffetStatut(id, newStatut) {
@@ -1985,6 +2415,38 @@
         }
 
         function openNewArticleModal() { document.getElementById('modal-stock-article').classList.remove('hidden'); document.getElementById('modal-stock-article').classList.add('flex'); }
+        function editStockArticle(id) {
+
+            // Chercher l'article sélectionné
+            const art = appState.stockArticles.find(a => a.id === id);
+
+            if (!art) {
+                alert("Article introuvable.");
+                return;
+            }
+
+            // Stocker l'ID pour savoir qu'on est en mode modification
+            document.getElementById('st-art-id').value = art.id;
+
+            // Remplir les champs existants
+            document.getElementById('st-art-ref').value = art.ref || '';
+            document.getElementById('st-art-nom').value = art.nom || '';
+            document.getElementById('st-art-seuil').value = art.seuil ?? 0;
+
+            // Modifier le titre de la fenêtre
+            document.getElementById('stock-article-modal-title').innerText =
+                'Modifier Article';
+
+            // Modifier le texte du bouton
+            document.getElementById('stock-article-submit-btn').innerText =
+                'Enregistrer';
+
+            // Ouvrir la modal
+            const modal = document.getElementById('modal-stock-article');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
         function closeStockArticleModal() { document.getElementById('modal-stock-article').classList.add('hidden'); document.getElementById('modal-stock-article').classList.remove('flex'); }
 
         function openAchatModal(preselectedArtId = '') {
@@ -1999,17 +2461,84 @@
 
         async function saveStockArticle(e) {
             e.preventDefault();
+
+            // ID vide = création
+            // ID présent = modification
+            const id = document.getElementById('st-art-id').value;
+
             const art = {
-                ref: document.getElementById('st-art-ref').value.trim().toUpperCase(),
-                nom: document.getElementById('st-art-nom').value.trim(),
-                seuil: parseInt(document.getElementById('st-art-seuil').value) || 0
+                ref: document.getElementById('st-art-ref')
+                    .value.trim().toUpperCase(),
+
+                nom: document.getElementById('st-art-nom')
+                    .value.trim(),
+
+                seuil: parseInt(
+                    document.getElementById('st-art-seuil').value
+                ) || 0
             };
-            const docRef = await addDoc(collection(window.db, "stock_articles"), art);
-            appState.stockArticles.push({ id: docRef.id, ...art });
-            closeStockArticleModal();
-            updateStockDropdowns();
-            renderStockInventoryTable();
-            renderAlertesTable();
+
+            try {
+
+                // ==========================================
+                // MODIFICATION D'UN ARTICLE EXISTANT
+                // ==========================================
+                if (id) {
+
+                    await window.updateDoc(
+                        window.doc(window.db, "stock_articles", id),
+                        art
+                    );
+
+                    // Mettre à jour également appState
+                    const index = appState.stockArticles.findIndex(
+                        a => a.id === id
+                    );
+
+                    if (index !== -1) {
+                        appState.stockArticles[index] = {
+                            ...appState.stockArticles[index],
+                            ...art
+                        };
+                    }
+                }
+
+                // ==========================================
+                // CRÉATION D'UN NOUVEL ARTICLE
+                // ==========================================
+                else {
+
+                    const docRef = await addDoc(
+                        collection(window.db, "stock_articles"),
+                        art
+                    );
+
+                    appState.stockArticles.push({
+                        id: docRef.id,
+                        ...art
+                    });
+                }
+
+                // Réinitialiser l'ID
+                document.getElementById('st-art-id').value = '';
+
+                // Fermer la fenêtre
+                closeStockArticleModal();
+
+                // Actualiser les données affichées
+                updateStockDropdowns();
+                renderStockInventoryTable();
+                renderAlertesTable();
+
+            } catch (error) {
+
+                console.error(
+                    "Erreur lors de l'enregistrement de l'article :",
+                    error
+                );
+
+                alert("Erreur lors de l'enregistrement de l'article.");
+            }
         }
 
         async function saveStockAchat(e) {
@@ -2111,7 +2640,7 @@
                     `<span class="px-2.5 py-1 rounded-lg text-xs bg-emerald-100 text-emerald-800 font-bold">${reste}</span>`;
 
                 let actionBtn = isAlerte ? 
-                    `<button onclick="openAchatModal('${art.id}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs"><i class="fa-solid fa-cart-shopping"></i> Commande</button>` :
+                    `<button onclick="openAchatModal('${art.id}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs"><i class="fa-solid fa-cart-shopping"></i> </button>` :
                     `<span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> OK</span>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
@@ -2122,6 +2651,11 @@
                     <td class="py-3 px-4 text-center">${resteBadge}</td>
                     <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
                     <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
+                     <button onclick="editStockArticle('${art.id}')"
+                            class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
+                            title="Modifier article">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
                         ${actionBtn}
                         <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
                     </td>

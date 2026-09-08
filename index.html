@@ -2271,27 +2271,6 @@
             });
 
             document.getElementById('total-global-transport').innerText = `${grandTotal.toFixed(2)} Dhs`;
-
-            const filtered = appState.transport.filter(t => {
-
-                if (fChantier && t.chantier !== fChantier)
-                    return false;
-
-                if (fMatricule && t.matricule !== fMatricule)
-                    return false;
-
-                if (
-                    fTrajet &&
-                    t.trajet &&
-                    !t.trajet.toLowerCase().includes(fTrajet)
-                )
-                    return false;
-
-                if (fDate && t.date !== fDate)
-                    return false;
-
-                return true;
-            });
         }
 
         async function deleteTransport(id) {

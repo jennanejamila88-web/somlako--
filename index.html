@@ -335,7 +335,7 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="overflow-x-auto">
                         <table id="main-table-paie" class="w-full text-left">
                             <thead>
@@ -368,7 +368,7 @@
                 <div class="bg-white rounded-2xl border p-6 space-y-6">
                     <div class="flex justify-between items-center flex-wrap gap-3">
                         <div>
-                            <h3 class="text-xl font-bold">Gestion Transport, Avances & Gasoil</h3>
+                            <h3 class="text-xl font-bold">Gestion Transport mode & Gasoil</h3>
                             <p class="text-xs text-slate-500">Suivi des voyages, matricules, trajets et calculs financiers</p>
                         </div>
                         <div class="flex items-center gap-2 no-print">
@@ -379,10 +379,16 @@
                                 <i class="fa-solid fa-print"></i> Imprimer / PDF
                             </button>
                             <button onclick="openTransportModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm flex items-center gap-1">
-                                <i class="fa-solid fa-plus"></i> Ajouter Voyage / Avance
+                                <i class="fa-solid fa-plus"></i> Ajouter Voyage
+                            </button>
+                            <button onclick="openGasoilModal()"
+                                    class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-sm">
+                                <i class="fa-solid fa-gas-pump mr-2"></i>
+                                Ajouter Gasoil
                             </button>
                         </div>
                     </div>
+
 
                     <!-- Filtres Module 2 -->
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 no-print">
@@ -598,6 +604,7 @@
                                 <tr class="bg-slate-50 border-b text-xs font-semibold text-slate-500 uppercase">
                                     <th class="py-3 px-4">Référence</th>
                                     <th class="py-3 px-4">Désignation</th>
+                                    <th class="py-3 px-4">MARQUE</th>
                                     <th class="py-3 px-4 text-center">Entrées (Achats)</th>
                                     <th class="py-3 px-4 text-center">Sorties</th>
                                     <th class="py-3 px-4 text-center">Reste en Stock</th>
@@ -728,7 +735,7 @@
     <div id="print-section-area"></div>
 
     <!-- MODALS SECTION -->
- 
+
     <div id="modal-salarie"
          class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
@@ -797,23 +804,16 @@
     <div id="modal-transport" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
             <h3 id="transport-modal-title" class="text-lg font-bold mb-4">
-                Ajouter Voyage, Avance ou Gasoil
+                Ajouter Voyage
             </h3>
             <form onsubmit="saveTransport(event)" class="space-y-4">
                 <input type="hidden" id="t-id">
+                <!-- Type fixé automatiquement à Voyage -->
+                <input type="hidden" id="t-type" value="Voyage">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold mb-1">Date</label>
                         <input type="date" id="t-date" required class="w-full p-2.5 border rounded-xl text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold mb-1">Type</label>
-                        <select id="t-type"
-                                onchange="updateTransportFormByType()"
-                                class="w-full p-2.5 border rounded-xl text-sm font-bold text-emerald-700">
-                            <option value="Voyage">Voyage de Transport</option>
-                            <option value="Gasoil">Gasoil</option>
-                        </select>
                     </div>
                 </div>
 
@@ -875,6 +875,121 @@
             </form>
         </div>
     </div>
+
+    <div id="modal-gasoil"
+         class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+
+            <h3 id="gasoil-modal-title"
+                class="text-xl font-bold mb-5">
+                Ajouter Gasoil
+            </h3>
+
+            <form onsubmit="saveGasoil(event)" class="space-y-5">
+
+                <!-- utilisé pour la modification -->
+                <input type="hidden" id="g-id">
+
+                <div class="grid grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">
+                            Date
+                        </label>
+
+                        <input type="date"
+                               id="g-date"
+                               required
+                               class="w-full p-2.5 border rounded-xl">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">
+                            Matricule Camion
+                        </label>
+
+                        <input type="text"
+                               id="g-matricule"
+                               required
+                               placeholder="Ex : 12345-A-26"
+                               class="w-full p-2.5 border rounded-xl">
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-3 gap-4 bg-slate-50 border rounded-xl p-4">
+
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">
+                            Quantité (litres)
+                        </label>
+
+                        <input type="number"
+                               id="g-qte"
+                               min="0"
+                               step="0.01"
+                               required
+                               oninput="calculateGasoilTotal()"
+                               class="w-full p-2.5 border rounded-xl text-center">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold mb-1">
+                            Prix / litre (Dhs)
+                        </label>
+
+                        <input type="number"
+                               id="g-pu"
+                               min="0"
+                               step="0.01"
+                               required
+                               oninput="calculateGasoilTotal()"
+                               class="w-full p-2.5 border rounded-xl text-center">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold mb-1 text-emerald-700">
+                            Montant Total
+                        </label>
+
+                        <div id="g-total"
+                             class="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-center font-bold text-emerald-700">
+                            0,00
+                        </div>
+                    </div>
+
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-2 font-semibold text-sm">
+                        <input type="checkbox"
+                               id="g-valide"
+                               class="w-5 h-5">
+                        Validé
+                    </label>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-3">
+
+                    <button type="button"
+                            onclick="closeGasoilModal()"
+                            class="px-4 py-2 bg-slate-100 rounded-xl">
+                        Annuler
+                    </button>
+
+                    <button type="submit"
+                            class="px-5 py-2 bg-emerald-600 text-white font-bold rounded-xl">
+                        Enregistrer
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 
     <!-- Effet Modal -->
     <div id="modal-effet" class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
@@ -981,6 +1096,13 @@
                 <div>
                     <label class="block text-xs font-semibold mb-1">Désignation (Nom de la pièce)</label>
                     <input type="text" id="st-art-nom" required placeholder="Ex: Filtre à Huile CAT 320" class="w-full p-2.5 border rounded-xl text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1">Marque</label>
+                    <input type="text"
+                           id="st-art-marque"
+                           placeholder="Ex: Bosch, Total, CAT..."
+                           class="w-full p-2.5 border rounded-xl text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1">Seuil Alerte Minimal</label>
@@ -1106,19 +1228,19 @@
             const cloneTable = table.cloneNode(true);
             cloneTable.querySelectorAll('.no-print').forEach(el => el.remove());
             const wb = XLSX.utils.table_to_book(cloneTable, { sheet: "Data" });
-            XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
         }
 
         function printTableSection(tableID, title) {
             const table = document.getElementById(tableID);
-            if(!table) return;
+            if (!table) return;
             const printContainer = document.getElementById('print-section-area');
             printContainer.innerHTML = `
-                <div style="padding: 20px;">
-                    <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
-                    ${table.outerHTML}
-                </div>
-            `;
+                    <div style="padding: 20px;">
+                        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
+                        ${table.outerHTML}
+                    </div>
+                `;
             window.print();
             printContainer.innerHTML = '';
         }
@@ -1131,7 +1253,7 @@
 
             try {
                 const q = window.query(
-                    window.collection(window.db, "users"), 
+                    window.collection(window.db, "users"),
                     window.where("username", "==", usernameInput),
                     window.where("password", "==", passwordInput)
                 );
@@ -1149,7 +1271,7 @@
                     initAppFromFirebase();
                 } else {
                     const allUsersSnap = await window.getDocs(window.collection(window.db, "users"));
-                    if(allUsersSnap.empty && usernameInput === "admin" && passwordInput === "admin2026") {
+                    if (allUsersSnap.empty && usernameInput === "admin" && passwordInput === "admin2026") {
                         const defaultUser = { username: "admin", password: "admin2026", role: "admin" };
                         const newUserRef = await window.addDoc(window.collection(window.db, "users"), defaultUser);
                         appState.currentUser = { id: newUserRef.id, ...defaultUser };
@@ -1229,7 +1351,7 @@
         function switchMainView(v) {
             ['home', 'module1', 'module2', 'module3', 'module4'].forEach(m => document.getElementById(`view-${m}`).classList.add('hidden'));
             document.getElementById(`view-${v}`).classList.remove('hidden');
-            if(v === 'home') document.getElementById('nav-home-btn').classList.add('hidden');
+            if (v === 'home') document.getElementById('nav-home-btn').classList.add('hidden');
             else document.getElementById('nav-home-btn').classList.remove('hidden');
         }
 
@@ -1240,8 +1362,8 @@
             });
             document.getElementById(`subview-${sub}`).classList.remove('hidden');
             document.getElementById(`tab-${sub}`).classList.add('tab-active');
-            if(sub === 'journal') renderPaieSummary();
-            if(sub === 'pointage') updateChantiersDropdown();
+            if (sub === 'journal') renderPaieSummary();
+            if (sub === 'pointage') updateChantiersDropdown();
         }
 
         function switchStockTab(st) {
@@ -1255,7 +1377,7 @@
 
         function openSalarieModal() { document.getElementById('modal-salarie').classList.remove('hidden'); document.getElementById('modal-salarie').classList.add('flex'); }
         function closeSalarieModal() { document.getElementById('modal-salarie').classList.add('hidden'); document.getElementById('modal-salarie').classList.remove('flex'); }
-        
+
         async function saveSalarie(e) {
             e.preventDefault();
 
@@ -1359,15 +1481,15 @@
             // Aucun résultat
             if (salariesFiltres.length === 0) {
                 tbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-6 text-slate-400">
-                    ${recherche
+                <tr>
+                    <td colspan="5" class="text-center py-6 text-slate-400">
+                        ${recherche
                         ? 'Aucun employé trouvé pour cette recherche'
                         : 'Aucune donnée disponible'
                     }
-                </td>
-            </tr>
-        `;
+                    </td>
+                </tr>
+            `;
                 return;
             }
 
@@ -1376,40 +1498,40 @@
 
             salariesFiltres.forEach(s => {
                 tbody.innerHTML += `
-            <tr class="hover:bg-slate-50">
-                <td class="py-3 px-4 font-bold">${s.nom}</td>
+                <tr class="hover:bg-slate-50">
+                    <td class="py-3 px-4 font-bold">${s.nom}</td>
 
-                <td class="py-3 px-4">
-                    ${s.fonction}
-                </td>
+                    <td class="py-3 px-4">
+                        ${s.fonction}
+                    </td>
 
-                <td class="py-3 px-4">
-                    ${s.tauxHs} Dhs
-                </td>
+                    <td class="py-3 px-4">
+                        ${s.tauxHs} Dhs
+                    </td>
 
-                <td class="py-3 px-4">
-                    ${s.panier} Dhs
-                </td>
+                    <td class="py-3 px-4">
+                        ${s.panier} Dhs
+                    </td>
 
-                <td class="py-3 px-4 text-right">
-                    <div class="flex items-center justify-end gap-3">
-                        <button
-                            onclick="editSalarie('${s.id}')"
-                            class="text-blue-600 hover:text-blue-800"
-                            title="Modifier">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                        <button
-                            onclick="deleteSalarie('${s.id}')"
-                            class="text-rose-600 hover:text-rose-800"
-                            title="Supprimer">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
+                    <td class="py-3 px-4 text-right">
+                        <div class="flex items-center justify-end gap-3">
+                            <button
+                                onclick="editSalarie('${s.id}')"
+                                class="text-blue-600 hover:text-blue-800"
+                                title="Modifier">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button
+                                onclick="deleteSalarie('${s.id}')"
+                                class="text-rose-600 hover:text-rose-800"
+                                title="Supprimer">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
 
-                    </div>
-                </td>
-            </tr>
-            `;
+                        </div>
+                    </td>
+                </tr>
+                `;
             });
         }
 
@@ -1462,7 +1584,7 @@
 
         function updateSalariesDropdown() {
             const sel = document.getElementById('p-salarie');
-            if(!sel) return;
+            if (!sel) return;
             sel.innerHTML = '<option value="">Sélectionner un employé</option>';
             appState.salaries.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.nom}</option>`);
         }
@@ -1557,10 +1679,10 @@
 
         function updateChantiersDropdown() {
             const selectFilter = document.getElementById('filter-chantier');
-            if(!selectFilter) return;
+            if (!selectFilter) return;
             const currentVal = selectFilter.value;
             const chantiersSet = new Set();
-            appState.pointages.forEach(p => { if(p.chantier) chantiersSet.add(p.chantier); });
+            appState.pointages.forEach(p => { if (p.chantier) chantiersSet.add(p.chantier); });
             selectFilter.innerHTML = '<option value="">Tous les chantiers</option>';
             chantiersSet.forEach(ch => { selectFilter.innerHTML += `<option value="${ch}">${ch}</option>`; });
             selectFilter.value = currentVal;
@@ -1568,7 +1690,7 @@
 
         function renderPointagesTable() {
             const tbody = document.getElementById('table-pointages-body');
-            const filterChantier =  document.getElementById('filter-chantier').value;
+            const filterChantier = document.getElementById('filter-chantier').value;
 
             const filterNom =
                 document.getElementById('filter-pointage-nom')
@@ -1596,7 +1718,7 @@
             });
             document.getElementById('pointage-count-badge').innerText = `${filteredPointages.length} ligne(s) affichée(s)`;
 
-            if(filteredPointages.length === 0) {
+            if (filteredPointages.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400">Aucun pointage trouvé</td></tr>`;
                 return;
             }
@@ -1604,38 +1726,38 @@
             filteredPointages.forEach(p => {
                 let hsBadge = p.hs > 0 ? `<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 font-bold">${p.hs} h</span>` : '<span class="text-slate-400">-</span>';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4">${p.date}</td>
-                    <td class="py-3 px-4 font-bold">${p.salNom}</td>
-                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
-                    <td class="py-3 px-4">${hsBadge}</td>
-                    <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
-                    <td class="py-3 px-4 text-right">
-                        <div class="flex items-center justify-end gap-3">
-                            <button
-                                onclick="editPointage('${p.id}')"
-                                class="text-blue-600 hover:text-blue-800"
-                                title="Modifier">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
+                        <td class="py-3 px-4">${p.date}</td>
+                        <td class="py-3 px-4 font-bold">${p.salNom}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
+                        <td class="py-3 px-4">${hsBadge}</td>
+                        <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
+                        <td class="py-3 px-4 text-right">
+                            <div class="flex items-center justify-end gap-3">
+                                <button
+                                    onclick="editPointage('${p.id}')"
+                                    class="text-blue-600 hover:text-blue-800"
+                                    title="Modifier">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
 
-                            <button
-                                onclick="deletePointage('${p.id}')"
-                                class="text-rose-600 hover:text-rose-800"
-                                title="Supprimer">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                                <button
+                                    onclick="deletePointage('${p.id}')"
+                                    class="text-rose-600 hover:text-rose-800"
+                                    title="Supprimer">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
 
-                        </div>
-                    </td>
-                </tr>`;
+                            </div>
+                        </td>
+                    </tr>`;
             });
         }
 
-        async function deletePointage(id) { 
+        async function deletePointage(id) {
             await deleteDoc(doc(window.db, "pointages", id));
-            appState.pointages = appState.pointages.filter(p => p.id !== id); 
+            appState.pointages = appState.pointages.filter(p => p.id !== id);
             updateChantiersDropdown();
-            renderPointagesTable(); 
+            renderPointagesTable();
         }
 
         function editPointage(id) {
@@ -1672,12 +1794,12 @@
             let grandTotalNet = 0;
 
             appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
-            
+
             appState.pointages.forEach(p => {
-                if(summary[p.salId]) {
+                if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
                     summary[p.salId].totalHs += (p.hs || 0);
-                    if(p.chantier) summary[p.salId].chantiers.add(p.chantier);
+                    if (p.chantier) summary[p.salId].chantiers.add(p.chantier);
                 }
             });
 
@@ -1693,20 +1815,20 @@
                 grandTotalNet += netAPayer;
 
                 let isValidated = statut === 'Validé';
-                let validationBadge = isValidated 
+                let validationBadge = isValidated
                     ? `<span class="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg"><i class="fa-solid fa-check-double"></i> Validé</span>`
                     : `<button onclick="validatePaie('${id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg border border-amber-300">Valider</button>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 font-bold">${d.nom}</td>
-                    <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
-                    <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
-                    <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
-                    <td class="py-3 px-4 text-center">${validationBadge}</td>
-                    <td class="py-3 px-4 text-center no-print">
-                        <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
-                    </td>
-                </tr>`;
+                        <td class="py-3 px-4 font-bold">${d.nom}</td>
+                        <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
+                        <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
+                        <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
+                        <td class="py-3 px-4 text-center">${validationBadge}</td>
+                        <td class="py-3 px-4 text-center no-print">
+                            <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
+                        </td>
+                    </tr>`;
             });
 
             document.getElementById('total-global-hsupp').innerText = `${grandTotalHs} h`;
@@ -1723,21 +1845,21 @@
         function printSingleEnvelope(nom, fonction, chantier, net) {
             const container = document.getElementById('print-envelopes-container');
             container.innerHTML = `
-                <div class="envelope-page">
-                    <div class="envelope-box">
-                        <div class="w-full space-y-6 text-center">
-                            <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
-                            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
-                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
-                            </div>
-                            <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                <span class="text-xl font-black text-blue-600">${net}</span>
+                    <div class="envelope-page">
+                        <div class="envelope-box">
+                            <div class="w-full space-y-6 text-center">
+                                <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
+                                <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
+                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
+                                </div>
+                                <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                    <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                    <span class="text-xl font-black text-blue-600">${net}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>`;
+                    </div>`;
             window.print();
             container.innerHTML = '';
         }
@@ -1748,10 +1870,10 @@
             let summary = {};
             appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
             appState.pointages.forEach(p => {
-                if(summary[p.salId]) {
+                if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
                     summary[p.salId].totalHs += (p.hs || 0);
-                    if(p.chantier) summary[p.salId].chantiers.add(p.chantier);
+                    if (p.chantier) summary[p.salId].chantiers.add(p.chantier);
                 }
             });
 
@@ -1760,21 +1882,21 @@
                 let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
                 let netAPayer = d.paniers + (d.totalHs * d.tauxHs);
                 container.innerHTML += `
-                    <div class="envelope-page">
-                        <div class="envelope-box">
-                            <div class="w-full space-y-6 text-center">
-                                <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
-                                <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
-                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
-                                </div>
-                                <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                    <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                    <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                        <div class="envelope-page">
+                            <div class="envelope-box">
+                                <div class="w-full space-y-6 text-center">
+                                    <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
+                                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                        <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
+                                        <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
+                                    </div>
+                                    <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                        <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                        <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
             });
             window.print();
             container.innerHTML = '';
@@ -1808,7 +1930,7 @@
 
             // Changer le titre
             document.getElementById('transport-modal-title').innerText =
-                'Modifier Voyage / Avance / Gasoil';
+                'Modifier Voyage';
 
             // Ouvrir la modal
             const modal = document.getElementById('modal-transport');
@@ -1835,7 +1957,7 @@
             document.getElementById('t-valide').checked = false;
 
             document.getElementById('transport-modal-title').innerText =
-                'Ajouter Voyage, Avance ou Gasoil';
+                'Ajouter Voyage';
 
             calculateTransportTotal();
 
@@ -1845,9 +1967,9 @@
             modal.classList.add('flex');
         }
 
-        function closeTransportModal() { 
-            document.getElementById('modal-transport').classList.add('hidden'); 
-            document.getElementById('modal-transport').classList.remove('flex'); 
+        function closeTransportModal() {
+            document.getElementById('modal-transport').classList.add('hidden');
+            document.getElementById('modal-transport').classList.remove('flex');
         }
 
         function calculateTransportTotal() {
@@ -1974,7 +2096,7 @@
         function updateTransportDropdowns() {
             const selChantier = document.getElementById('filtre-t-chantier');
             const selMatricule = document.getElementById('filtre-t-matricule');
-            if(!selChantier || !selMatricule) return;
+            if (!selChantier || !selMatricule) return;
 
             const curChantier = selChantier.value;
             const curMatricule = selMatricule.value;
@@ -1983,8 +2105,8 @@
             const matriculesSet = new Set();
 
             appState.transport.forEach(t => {
-                if(t.chantier) chantiersSet.add(t.chantier);
-                if(t.matricule) matriculesSet.add(t.matricule);
+                if (t.chantier) chantiersSet.add(t.chantier);
+                if (t.matricule) matriculesSet.add(t.matricule);
             });
 
             selChantier.innerHTML = '<option value="">Tous les titulaires</option>';
@@ -2006,14 +2128,14 @@
             const fDate = document.getElementById('filtre-t-date').value;
 
             const filtered = appState.transport.filter(t => {
-                if(fChantier && t.chantier !== fChantier) return false;
-                if(fMatricule && t.matricule !== fMatricule) return false;
-                if(fTrajet && t.trajet && !t.trajet.toLowerCase().includes(fTrajet)) return false;
-                if(fDate && t.date !== fDate) return false;
+                if (fChantier && t.chantier !== fChantier) return false;
+                if (fMatricule && t.matricule !== fMatricule) return false;
+                if (fTrajet && t.trajet && !t.trajet.toLowerCase().includes(fTrajet)) return false;
+                if (fDate && t.date !== fDate) return false;
                 return true;
             });
 
-            if(filtered.length === 0) {
+            if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-slate-400">Aucun enregistrement trouvé</td></tr>`;
                 document.getElementById('total-global-transport').innerText = '0.00 Dhs';
                 return;
@@ -2021,115 +2143,418 @@
 
             let grandTotal = 0;
 
+            // ==============================
+            // CALCUL GASOIL PAR MATRICULE
+            // ==============================
+            const gasoilParMatricule = {};
+
+            appState.transport.forEach(g => {
+
+                if (g.type !== 'Gasoil') return;
+
+                const matricule = (g.matricule || '')
+                    .trim()
+                    .toUpperCase();
+
+                if (!matricule) return;
+
+                const montantGasoil =
+                    parseFloat(g.total) ||
+                    ((parseFloat(g.qte) || 0) * (parseFloat(g.pu) || 0));
+
+                if (!gasoilParMatricule[matricule]) {
+                    gasoilParMatricule[matricule] = 0;
+                }
+
+                gasoilParMatricule[matricule] += montantGasoil;
+            });
+
+
+            // ==============================
+            // AFFICHAGE DES LIGNES
+            // ==============================
             filtered.forEach(t => {
-                let ligneTotal = t.total !== undefined ? t.total : (t.voyages || t.qte || 1) * (t.pu || 0);
-                grandTotal += ligneTotal;
+
+                let ligneTotal =
+                    t.total !== undefined
+                        ? parseFloat(t.total) || 0
+                        : (t.voyages || t.qte || 1) * (t.pu || 0);
+
+                const matricule = (t.matricule || '')
+                    .trim()
+                    .toUpperCase();
+
+                let montantHtml = '';
+                if (t.type === 'Voyage') {
+
+                    const totalGasoil =
+                        gasoilParMatricule[matricule] || 0;
+
+                    const gain =
+                        ligneTotal - totalGasoil;
+
+                    if (totalGasoil > 0) {
+
+                        montantHtml = `
+            <div class="font-bold text-emerald-700">
+                ${gain.toFixed(2)} Dhs
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                ${ligneTotal.toFixed(2)}
+                -
+                <span class="text-rose-600 font-semibold">
+                    ${totalGasoil.toFixed(2)} Gasoil
+                </span>
+            </div>
+        `;
+                        grandTotal += gain;
+
+                    } else {
+
+                        montantHtml = `
+            <div class="font-bold text-emerald-700">
+                ${ligneTotal.toFixed(2)} Dhs
+            </div>
+        `;
+                        grandTotal += ligneTotal;
+                    }
+
+                } else {
+
+                    // Ligne GASOIL :
+                    // on affiche son montant mais on ne l'ajoute pas au total des voyages
+
+                    montantHtml = `
+        <div class="font-bold text-amber-600">
+            ${ligneTotal.toFixed(2)} Dhs
+        </div>
+    `;
+                }
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 text-xs">${t.date}</td>
-                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
-                    <td class="py-3 px-4 font-bold">${t.chauffeur}</td>
-                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
-                    <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
-                    <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
-                    <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
-                    <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
-                    <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
-                    <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
-                    <td class="py-3 px-4 text-right font-bold text-emerald-700">${ligneTotal.toFixed(2)} Dhs</td>
-                    <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
-                    <td class="py-3 px-4 text-right no-print">
-                        <div class="flex items-center justify-end gap-3">
+                        <td class="py-3 px-4 text-xs">${t.date}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
+                        <td class="py-3 px-4 font-bold">${t.chauffeur || '-'}</td>
+                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
+                        <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
+                        <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
+                        <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
+                        <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
+                        <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
+                        <td class="py-3 px-4 text-right">
+                            ${montantHtml}
+                        </td>
+                        <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
+                        <td class="py-3 px-4 text-right no-print">
+                            <div class="flex items-center justify-end gap-3">
 
-                            <button
-                                onclick="editTransport('${t.id}')"
-                                class="text-blue-600 hover:text-blue-800"
-                                title="Modifier">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
+                                <button
+                                    onclick="${t.type === 'Gasoil'
+                                                        ? `editGasoil('${t.id}')`
+                                                        : `editTransport('${t.id}')`}"
+                                    class="text-blue-600 hover:text-blue-800"
+                                    title="Modifier">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
 
-                            <button
-                                onclick="deleteTransport('${t.id}')"
-                                class="text-rose-600 hover:text-rose-800"
-                                title="Supprimer">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                                <button
+                                    onclick="deleteTransport('${t.id}')"
+                                    class="text-rose-600 hover:text-rose-800"
+                                    title="Supprimer">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
 
-                        </div>
-                    </td>
-                </tr>`;
+                            </div>
+                        </td>
+                    </tr>`;
             });
 
             document.getElementById('total-global-transport').innerText = `${grandTotal.toFixed(2)} Dhs`;
+
+            const filtered = appState.transport.filter(t => {
+
+                if (fChantier && t.chantier !== fChantier)
+                    return false;
+
+                if (fMatricule && t.matricule !== fMatricule)
+                    return false;
+
+                if (
+                    fTrajet &&
+                    t.trajet &&
+                    !t.trajet.toLowerCase().includes(fTrajet)
+                )
+                    return false;
+
+                if (fDate && t.date !== fDate)
+                    return false;
+
+                return true;
+            });
         }
 
-        async function deleteTransport(id) { 
+        async function deleteTransport(id) {
             await deleteDoc(doc(window.db, "transport", id));
-            appState.transport = appState.transport.filter(t => t.id !== id); 
+            appState.transport = appState.transport.filter(t => t.id !== id);
             updateTransportDropdowns();
-            renderTransportTable(); 
+            renderTransportTable();
         }
 
-        function updateTransportFormByType() {
+        function openGasoilModal() {
 
-            const type = document.getElementById('t-type').value;
+            // Mode ajout
+            document.getElementById('g-id').value = '';
 
-            const groupChauffeur = document.getElementById('group-t-chauffeur');
-            const groupTitulaire = document.getElementById('group-t-titulaire');
-            const groupBon = document.getElementById('group-t-bon');
-            const groupReference = document.getElementById('group-t-reference');
-            const groupTrajet = document.getElementById('group-t-trajet');
+            document.getElementById('g-date').value = '';
+            document.getElementById('g-matricule').value = '';
+            document.getElementById('g-qte').value = '0';
+            document.getElementById('g-pu').value = '0';
+            document.getElementById('g-total').value = '0.00';
+            document.getElementById('g-valide').checked = false;
 
-            const labelQte = document.getElementById('label-t-qte');
-            const labelPu = document.getElementById('label-t-pu');
+            document.getElementById('gasoil-modal-title').innerText =
+                'Ajouter Gasoil';
 
-            const inputQte = document.getElementById('t-qte');
-            const inputPu = document.getElementById('t-pu');
+            const modal = document.getElementById('modal-gasoil');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeGasoilModal() {
+
+            const modal = document.getElementById('modal-gasoil');
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function calculateGasoilTotal() {
+
+            const qte =
+                parseFloat(document.getElementById('g-qte').value) || 0;
+
+            const pu =
+                parseFloat(document.getElementById('g-pu').value) || 0;
+
+            document.getElementById('g-total').value =
+                (qte * pu).toFixed(2);
+        }
+
+        async function saveGasoil(e) {
+
+            e.preventDefault();
+
+            const id = document.getElementById('g-id').value;
+
+            const qte =
+                parseFloat(document.getElementById('g-qte').value) || 0;
+
+            const pu =
+                parseFloat(document.getElementById('g-pu').value) || 0;
 
 
-            // ==============================
-            // GASOIL
-            // ==============================
-            if (type === 'Gasoil') {
+            const gasoil = {
 
-                // Cacher les champs inutiles
-                groupChauffeur.style.display = 'none';
-                groupTitulaire.style.display = 'none';
-                groupBon.style.display = 'none';
-                groupReference.style.display = 'none';
-                groupTrajet.style.display = 'none';
+                date:
+                    document.getElementById('g-date').value,
 
-                // Adapter les intitulés
-                labelQte.innerText = 'Quantité (litres)';
-                labelPu.innerText = 'Prix / litre (Dhs)';
+                type: 'Gasoil',
 
-                inputQte.placeholder = 'Ex : 200';
-                inputPu.placeholder = 'Ex : 14.80';
+                matricule:
+                    document.getElementById('g-matricule')
+                        .value
+                        .trim()
+                        .toUpperCase(),
+
+                qte: qte,
+
+                pu: pu,
+
+                total: qte * pu,
+
+                valide:
+                    document.getElementById('g-valide').checked
+            };
+
+
+            try {
+
+                // =============================
+                // MODIFICATION
+                // =============================
+                if (id) {
+
+                    await window.updateDoc(
+                        window.doc(window.db, "transport", id),
+                        gasoil
+                    );
+
+                    const index =
+                        appState.transport.findIndex(
+                            item => item.id === id
+                        );
+
+                    if (index !== -1) {
+
+                        appState.transport[index] = {
+                            ...appState.transport[index],
+                            ...gasoil
+                        };
+                    }
+
+                }
+
+                // =============================
+                // AJOUT
+                // =============================
+                else {
+
+                    const docRef = await addDoc(
+                        collection(window.db, "transport"),
+                        gasoil
+                    );
+
+                    appState.transport.push({
+                        id: docRef.id,
+                        ...gasoil
+                    });
+                }
+
+
+                closeGasoilModal();
+
+                updateTransportDropdowns();
+
+                // Pour l'instant ton tableau existant
+                renderTransportTable();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Erreur enregistrement Gasoil :",
+                    error
+                );
+
+                alert(
+                    "Erreur lors de l'enregistrement du Gasoil."
+                );
+            }
+        }
+
+        function editGasoil(id) {
+
+            const g = appState.transport.find(
+                item => item.id === id && item.type === 'Gasoil'
+            );
+
+            if (!g) {
+                alert("Enregistrement Gasoil introuvable.");
+                return;
             }
 
 
-            // ==============================
-            // VOYAGE
-            // ==============================
-            else {
+            // ID Firebase
+            document.getElementById('g-id').value = g.id;
 
-                // Réafficher tous les champs
-                groupChauffeur.style.display = '';
-                groupTitulaire.style.display = '';
-                groupBon.style.display = '';
-                groupReference.style.display = '';
-                groupTrajet.style.display = '';
 
-                // Intitulés Voyage
-                labelQte.innerText = 'Nombre de trajets';
-                labelPu.innerText = 'Prix / trajet (Dhs)';
+            // Remplir la modal
+            document.getElementById('g-date').value =
+                g.date || '';
 
-                inputQte.placeholder = 'Ex : 1';
-                inputPu.placeholder = 'Ex : 2200';
-            }
+            document.getElementById('g-matricule').value =
+                g.matricule || '';
 
-            calculateTransportTotal();
+            document.getElementById('g-qte').value =
+                g.qte || 0;
+
+            document.getElementById('g-pu').value =
+                g.pu || 0;
+
+            document.getElementById('g-valide').checked =
+                g.valide || false;
+
+
+            // Calcul du total
+            calculateGasoilTotal();
+
+
+            // Titre
+            document.getElementById('gasoil-modal-title').innerText =
+                'Modifier Gasoil';
+
+
+            // Ouvrir
+            const modal =
+                document.getElementById('modal-gasoil');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
+
+
+        //function updateTransportFormByType() {
+
+        //    const type = document.getElementById('t-type').value;
+
+        //    const groupChauffeur = document.getElementById('group-t-chauffeur');
+        //    const groupTitulaire = document.getElementById('group-t-titulaire');
+        //    const groupBon = document.getElementById('group-t-bon');
+        //    const groupReference = document.getElementById('group-t-reference');
+        //    const groupTrajet = document.getElementById('group-t-trajet');
+
+        //    const labelQte = document.getElementById('label-t-qte');
+        //    const labelPu = document.getElementById('label-t-pu');
+
+        //    const inputQte = document.getElementById('t-qte');
+        //    const inputPu = document.getElementById('t-pu');
+
+
+        //    // ==============================
+        //    // GASOIL
+        //    // ==============================
+        //    if (type === 'Gasoil') {
+
+        //        // Cacher les champs inutiles
+        //        groupChauffeur.style.display = 'none';
+        //        groupTitulaire.style.display = 'none';
+        //        groupBon.style.display = 'none';
+        //        groupReference.style.display = 'none';
+        //        groupTrajet.style.display = 'none';
+
+        //        // Adapter les intitulés
+        //        labelQte.innerText = 'Quantité (litres)';
+        //        labelPu.innerText = 'Prix / litre (Dhs)';
+
+        //        inputQte.placeholder = 'Ex : 200';
+        //        inputPu.placeholder = 'Ex : 14.80';
+        //    }
+
+
+        //    // ==============================
+        //    // VOYAGE
+        //    // ==============================
+        //    else {
+
+        //        // Réafficher tous les champs
+        //        groupChauffeur.style.display = '';
+        //        groupTitulaire.style.display = '';
+        //        groupBon.style.display = '';
+        //        groupReference.style.display = '';
+        //        groupTrajet.style.display = '';
+
+        //        // Intitulés Voyage
+        //        labelQte.innerText = 'Nombre de trajets';
+        //        labelPu.innerText = 'Prix / trajet (Dhs)';
+
+        //        inputQte.placeholder = 'Ex : 1';
+        //        inputPu.placeholder = 'Ex : 2200';
+        //    }
+
+        //    calculateTransportTotal();
+        //}
 
         // EFFETS LOGIC
         function openEffetModal() {
@@ -2145,7 +2570,7 @@
             document.getElementById('e-echeance').value = '';
             document.getElementById('e-statut').value = 'En attente';
             document.getElementById('e-effetDate').value = '';
-     /*       document.getElementById('e-scan').value = '';*/
+            /*       document.getElementById('e-scan').value = '';*/
 
             document.getElementById('effet-modal-title').innerText =
                 'Ajouter Chèque / Lettre de Change';
@@ -2158,7 +2583,7 @@
             modal.classList.add('flex');
         }
         function closeEffetModal() { document.getElementById('modal-effet').classList.add('hidden'); document.getElementById('modal-effet').classList.remove('flex'); }
-        
+
         function toggleEffetDateModal() {
             let statut = document.getElementById('e-statut').value;
             let group = document.getElementById('e-effetDateGroup');
@@ -2169,9 +2594,9 @@
             e.preventDefault();
             const scanInput = document.getElementById('e-scan');
             let scanData = '';
-            if(scanInput.files && scanInput.files[0]) {
+            if (scanInput.files && scanInput.files[0]) {
                 const reader = new FileReader();
-                reader.onload = async function(uploadEvent) {
+                reader.onload = async function (uploadEvent) {
                     scanData = uploadEvent.target.result;
                     await submitEffetData(scanData);
                 };
@@ -2285,10 +2710,10 @@
             const fDate = document.getElementById('filtre-date').value;
 
             const filtered = appState.effets.filter(e => {
-                if(fType && e.type !== fType) return false;
-                if(fBanque && e.banque !== fBanque) return false;
-                if(fBenef && !e.beneficiaire.toLowerCase().includes(fBenef)) return false;
-                if(fDate && e.echeance !== fDate) return false;
+                if (fType && e.type !== fType) return false;
+                if (fBanque && e.banque !== fBanque) return false;
+                if (fBenef && !e.beneficiaire.toLowerCase().includes(fBenef)) return false;
+                if (fDate && e.echeance !== fDate) return false;
                 return true;
             });
 
@@ -2303,7 +2728,7 @@
                 totalMontant.toLocaleString('fr-FR') + ' Dhs';
 
 
-            if(filtered.length === 0) {
+            if (filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-slate-400">Aucun effet trouvé</td></tr>`;
                 return;
             }
@@ -2311,44 +2736,44 @@
             filtered.forEach(e => {
                 let scanBadge = e.scan ? `<a href="${e.scan}" target="_blank" class="text-blue-600 underline font-semibold text-xs">Voir Scan</a>` : '<span class="text-slate-400">Aucun</span>';
                 let effetDateText = (e.statut === 'Effet Reporté' && e.effetDate) ? `<br><span class="text-xs text-amber-600 font-bold">Reporté au: ${e.effetDate}</span>` : '';
-                
+
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
-                    <td class="py-3 px-4 font-bold">${e.numero}</td>
-                    <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
-                    <td class="py-3 px-4">${e.serviceType || '-'}</td>
-                    <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
-                    <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
-                    <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
-                    <td class="py-3 px-4 text-center">
-                        <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
-                            <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
-                            <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
-                            <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
-                            <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
-                            <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
-                        </select>
-                    </td>
-                    <td class="py-3 px-4 text-right no-print">
-                        <div class="flex items-center justify-end gap-3">
+                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
+                        <td class="py-3 px-4 font-bold">${e.numero}</td>
+                        <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
+                        <td class="py-3 px-4">${e.serviceType || '-'}</td>
+                        <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
+                        <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
+                        <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
+                        <td class="py-3 px-4 text-center">
+                            <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
+                                <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
+                                <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
+                                <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
+                                <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
+                                <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-4 text-right no-print">
+                            <div class="flex items-center justify-end gap-3">
 
-                            <button
-                                onclick="editEffet('${e.id}')"
-                                class="text-blue-600 hover:text-blue-800"
-                                title="Modifier">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
+                                <button
+                                    onclick="editEffet('${e.id}')"
+                                    class="text-blue-600 hover:text-blue-800"
+                                    title="Modifier">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
 
-                            <button
-                                onclick="deleteEffet('${e.id}')"
-                                class="text-rose-600 hover:text-rose-800"
-                                title="Supprimer">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                                <button
+                                    onclick="deleteEffet('${e.id}')"
+                                    class="text-rose-600 hover:text-rose-800"
+                                    title="Supprimer">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
 
-                        </div>
-                    </td>
-                </tr>`;
+                            </div>
+                        </td>
+                    </tr>`;
             });
         }
 
@@ -2392,20 +2817,20 @@
         async function updateEffetStatut(id, newStatut) {
             await setDoc(doc(window.db, "effets", id), { statut: newStatut }, { merge: true });
             const item = appState.effets.find(e => e.id === id);
-            if(item) item.statut = newStatut;
+            if (item) item.statut = newStatut;
         }
 
-        async function deleteEffet(id) { 
+        async function deleteEffet(id) {
             await deleteDoc(doc(window.db, "effets", id));
-            appState.effets = appState.effets.filter(e => e.id !== id); 
-            renderEffetsTable(); 
+            appState.effets = appState.effets.filter(e => e.id !== id);
+            renderEffetsTable();
         }
 
         // STOCK LOGIC
         function updateStockDropdowns() {
             const selectAchat = document.getElementById('st-ac-article');
             const selectSortie = document.getElementById('st-so-article');
-            if(!selectAchat || !selectSortie) return;
+            if (!selectAchat || !selectSortie) return;
             selectAchat.innerHTML = '<option value="">Sélectionner un article</option>';
             selectSortie.innerHTML = '<option value="">Sélectionner un article</option>';
             appState.stockArticles.forEach(art => {
@@ -2432,6 +2857,7 @@
             document.getElementById('st-art-ref').value = art.ref || '';
             document.getElementById('st-art-nom').value = art.nom || '';
             document.getElementById('st-art-seuil').value = art.seuil ?? 0;
+            document.getElementById('st-art-marque').value = art.marque || '';
 
             // Modifier le titre de la fenêtre
             document.getElementById('stock-article-modal-title').innerText =
@@ -2452,7 +2878,7 @@
         function openAchatModal(preselectedArtId = '') {
             document.getElementById('modal-stock-achat').classList.remove('hidden');
             document.getElementById('modal-stock-achat').classList.add('flex');
-            if(preselectedArtId) document.getElementById('st-ac-article').value = preselectedArtId;
+            if (preselectedArtId) document.getElementById('st-ac-article').value = preselectedArtId;
         }
         function closeAchatModal() { document.getElementById('modal-stock-achat').classList.add('hidden'); document.getElementById('modal-stock-achat').classList.remove('flex'); }
 
@@ -2471,6 +2897,9 @@
                     .value.trim().toUpperCase(),
 
                 nom: document.getElementById('st-art-nom')
+                    .value.trim(),
+
+                marque: document.getElementById('st-art-marque')
                     .value.trim(),
 
                 seuil: parseInt(
@@ -2568,7 +2997,7 @@
             let totalSorti = appState.stockSorties.filter(s => s.articleId === artId).reduce((sum, s) => sum + s.quantite, 0);
             let resteActuel = totalAchete - totalSorti;
 
-            if(qteSortie > resteActuel) {
+            if (qteSortie > resteActuel) {
                 alert(`Attention: Quantité insuffisante en stock! Reste disponible: ${resteActuel}`);
             }
 
@@ -2589,7 +3018,7 @@
         }
 
         async function deleteStockArticle(artId) {
-            if(!confirm("Êtes-vous sûr de vouloir supprimer cet article du stock ?")) return;
+            if (!confirm("Êtes-vous sûr de vouloir supprimer cet article du stock ?")) return;
             try {
                 await deleteDoc(doc(window.db, "stock_articles", artId));
                 appState.stockArticles = appState.stockArticles.filter(a => a.id !== artId);
@@ -2611,20 +3040,20 @@
 
             const filteredArticles = appState.stockArticles.filter(art => {
                 let matchText = art.ref.toLowerCase().includes(filtreTexte) || art.nom.toLowerCase().includes(filtreTexte);
-                if(!matchText) return false;
+                if (!matchText) return false;
 
                 let totalAchats = appState.stockAchats.filter(a => a.articleId === art.id).reduce((sum, a) => sum + a.quantite, 0);
                 let totalSorties = appState.stockSorties.filter(s => s.articleId === art.id).reduce((sum, s) => sum + s.quantite, 0);
                 let reste = totalAchats - totalSorties;
                 let isAlerte = reste <= art.seuil;
 
-                if(filtreEtat === 'alerte' && !isAlerte) return false;
-                if(filtreEtat === 'ok' && isAlerte) return false;
+                if (filtreEtat === 'alerte' && !isAlerte) return false;
+                if (filtreEtat === 'ok' && isAlerte) return false;
 
                 return true;
             });
 
-            if(filteredArticles.length === 0) {
+            if (filteredArticles.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucun article trouvé</td></tr>`;
                 return;
             }
@@ -2635,38 +3064,39 @@
                 let reste = totalAchats - totalSorties;
 
                 let isAlerte = reste <= art.seuil;
-                let resteBadge = isAlerte ? 
-                    `<span class="px-2.5 py-1 rounded-lg text-xs bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${reste} (Alerte!)</span>` : 
+                let resteBadge = isAlerte ?
+                    `<span class="px-2.5 py-1 rounded-lg text-xs bg-rose-100 text-rose-800 font-extrabold flex items-center justify-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> ${reste} (Alerte!)</span>` :
                     `<span class="px-2.5 py-1 rounded-lg text-xs bg-emerald-100 text-emerald-800 font-bold">${reste}</span>`;
 
-                let actionBtn = isAlerte ? 
+                let actionBtn = isAlerte ?
                     `<button onclick="openAchatModal('${art.id}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shadow-xs"><i class="fa-solid fa-cart-shopping"></i> </button>` :
                     `<span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> OK</span>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                    <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
-                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
-                    <td class="py-3 px-4 text-center">${resteBadge}</td>
-                    <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
-                    <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
-                     <button onclick="editStockArticle('${art.id}')"
-                            class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
-                            title="Modifier article">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                        ${actionBtn}
-                        <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
-                    </td>
-                </tr>`;
+                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                        <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                        <td class="py-3 px-4 text-slate-600 font-semibold">${art.marque || '-'}</td>
+                        <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
+                        <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
+                        <td class="py-3 px-4 text-center">${resteBadge}</td>
+                        <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
+                        <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
+                         <button onclick="editStockArticle('${art.id}')"
+                                class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
+                                title="Modifier article">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                            ${actionBtn}
+                            <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>`;
             });
         }
 
         function renderAchatsTable() {
             const tbody = document.getElementById('table-achats-body');
             tbody.innerHTML = '';
-            if(appState.stockAchats.length === 0) {
+            if (appState.stockAchats.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucun achat enregistré</td></tr>`;
                 return;
             }
@@ -2674,14 +3104,14 @@
                 let art = appState.stockArticles.find(a => a.id === ac.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
-                    <td class="py-3 px-4 font-bold">${artNom}</td>
-                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
-                    <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
-                    <td class="py-3 px-4">${ac.fournisseur}</td>
-                    <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
-                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>`;
+                        <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
+                        <td class="py-3 px-4 font-bold">${artNom}</td>
+                        <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
+                        <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
+                        <td class="py-3 px-4">${ac.fournisseur}</td>
+                        <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
+                        <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                    </tr>`;
             });
         }
 
@@ -2696,7 +3126,7 @@
         function renderSortiesTable() {
             const tbody = document.getElementById('table-sorties-body');
             tbody.innerHTML = '';
-            if(appState.stockSorties.length === 0) {
+            if (appState.stockSorties.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-slate-400">Aucune sortie enregistrée</td></tr>`;
                 return;
             }
@@ -2704,14 +3134,14 @@
                 let art = appState.stockArticles.find(a => a.id === so.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
-                    <td class="py-3 px-4 font-bold">${artNom}</td>
-                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
-                    <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
-                    <td class="py-3 px-4 text-xs">${so.preneur}</td>
-                    <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
-                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                </tr>`;
+                        <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
+                        <td class="py-3 px-4 font-bold">${artNom}</td>
+                        <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
+                        <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
+                        <td class="py-3 px-4 text-xs">${so.preneur}</td>
+                        <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
+                        <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                    </tr>`;
             });
         }
 
@@ -2733,28 +3163,28 @@
                 let totalSorties = appState.stockSorties.filter(s => s.articleId === art.id).reduce((sum, s) => sum + s.quantite, 0);
                 let reste = totalAchats - totalSorties;
 
-                if(reste <= art.seuil) {
+                if (reste <= art.seuil) {
                     alertesCount++;
                     let achatsArticle = appState.stockAchats.filter(a => a.articleId === art.id);
                     let meilleurFournisseur = achatsArticle.length > 0 ? achatsArticle[achatsArticle.length - 1].fournisseur : 'Aucun historique';
 
                     tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                        <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                        <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
-                        <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
-                        <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
-                        <td class="py-3 px-4 text-center no-print">
-                            <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
-                                <i class="fa-solid fa-cart-plus"></i> Commander
-                            </button>
-                        </td>
-                    </tr>`;
+                            <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                            <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                            <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
+                            <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
+                            <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
+                            <td class="py-3 px-4 text-center no-print">
+                                <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
+                                    <i class="fa-solid fa-cart-plus"></i> Commander
+                                </button>
+                            </td>
+                        </tr>`;
                 }
             });
 
             document.getElementById('count-alertes').innerText = alertesCount;
-            if(alertesCount === 0) {
+            if (alertesCount === 0) {
                 tbody.innerHTML = `<tr><td colspan="6" class="text-center py-6 text-slate-400 font-medium">Aucun article en alerte de stock. Tout va bien !</td></tr>`;
             }
         }

@@ -1210,7 +1210,17 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold mb-1">Sélectionner Article</label>
-                        <select id="st-so-article" required class="w-full p-2.5 border rounded-xl text-sm font-semibold"></select>
+                        <input type="text"
+                               id="st-so-article-nom"
+                               list="st-so-article-liste"
+                               placeholder="Sélectionner ou saisir un article"
+                               autocomplete="off"
+                               required
+                               class="w-full p-2.5 border rounded-xl text-sm">
+
+                        <datalist id="st-so-article-liste"></datalist>
+
+                        <input type="hidden" id="st-so-article">
                     </div>
                 </div>
 
@@ -2988,15 +2998,17 @@
 
         // STOCK LOGIC
         function updateStockDropdowns() {
-            const selectAchat = document.getElementById('st-ac-article');
-            const selectSortie = document.getElementById('st-so-article');
-            if (!selectAchat || !selectSortie) return;
-            selectAchat.innerHTML = '<option value="">Sélectionner un article</option>';
-            selectSortie.innerHTML = '<option value="">Sélectionner un article</option>';
-            appState.stockArticles.forEach(art => {
-                selectAchat.innerHTML += `<option value="${art.id}">${art.ref} - ${art.nom}</option>`;
-                selectSortie.innerHTML += `<option value="${art.id}">${art.ref} - ${art.nom}</option>`;
-            });
+            const sortieListe = document.getElementById('st-so-article-liste');
+
+            if (sortieListe) {
+                sortieListe.innerHTML = '';
+
+                appState.stockArticles.forEach(article => {
+                    sortieListe.innerHTML += `
+                     <option value="${article.ref} - ${article.nom}"></option>
+                 `;
+                });
+            }
         }
 
         function openNewArticleModal() { document.getElementById('modal-stock-article').classList.remove('hidden'); document.getElementById('modal-stock-article').classList.add('flex'); }
@@ -3119,7 +3131,8 @@
                 renderStockInventoryTable();
                 renderAlertesTable();
 
-            } catch (error) {
+            }
+            catch (error) {
 
                 console.error(
                     "Erreur lors de l'enregistrement de l'article :",
@@ -3128,6 +3141,7 @@
 
                 alert("Erreur lors de l'enregistrement de l'article.");
             }
+           
         }
 
         async function saveStockAchat(e) {
@@ -3150,7 +3164,23 @@
 
         async function saveStockSortie(e) {
             e.preventDefault();
-            const artId = document.getElementById('st-so-article').value;
+            const articleSaisi = document
+                .getElementById('st-so-article-nom')
+                .value
+                .trim()
+                .toLowerCase();
+
+            const article = appState.stockArticles.find(a =>
+                `${a.ref} - ${a.nom}`.trim().toLowerCase() === articleSaisi
+            );
+
+            if (!article) {
+                alert("Veuillez sélectionner un article existant.");
+                return;
+            }
+
+            const artId = article.id;
+
             const qteSortie = parseInt(document.getElementById('st-so-qte').value) || 0;
 
             let totalAchete = appState.stockAchats.filter(a => a.articleId === artId).reduce((sum, a) => sum + a.quantite, 0);
@@ -3170,7 +3200,17 @@
                 chantier: document.getElementById('st-so-chantier').value || '-'
             };
             const docRef = await addDoc(collection(window.db, "stock_sorties"), sortie);
+
             appState.stockSorties.push({ id: docRef.id, ...sortie });
+            // Vider le formulaire de sortie stock
+            document.getElementById('st-so-date').value = '';
+            document.getElementById('st-so-article-nom').value = '';
+            document.getElementById('st-so-article').value = '';
+            document.getElementById('st-so-qte').value = '1';
+            document.getElementById('st-so-preneur').value = '';
+            document.getElementById('st-so-lieu').value = '';
+            document.getElementById('st-so-chantier').value = '';
+
             closeSortieModal();
             renderStockInventoryTable();
             renderSortiesTable();

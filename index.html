@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- SheetJS Library for Excel Exporting -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -43,7 +43,7 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             const savedUser = localStorage.getItem('somlako_user');
-            if(savedUser) {
+            if (savedUser) {
                 appState.currentUser = JSON.parse(savedUser);
                 appState.authenticated = true;
                 document.getElementById('auth-modal').classList.add('hidden');
@@ -53,30 +53,82 @@
             }
         });
     </script>
-    
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+
         @media print {
-            body * { visibility: hidden; }
-            #print-envelopes-container, #print-envelopes-container *, #print-section-area, #print-section-area * { visibility: visible; }
-            #print-envelopes-container { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-            #print-section-area { position: absolute; left: 0; top: 0; width: 100%; }
-            .no-print { display: none !important; }
-            body { background: white !important; }
-            
-            .envelope-page {
-                width: 100vw; height: 100vh; page-break-after: always;
-                display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0; padding: 0;
+            body * {
+                visibility: hidden;
             }
+
+            #print-envelopes-container, #print-envelopes-container *, #print-section-area, #print-section-area * {
+                visibility: visible;
+            }
+
+            #print-envelopes-container {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+            }
+
+            #print-section-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background: white !important;
+            }
+
+            .envelope-page {
+                width: 100vw;
+                height: 100vh;
+                page-break-after: always;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                margin: 0;
+                padding: 0;
+            }
+
             .envelope-box {
-                width: 220mm; height: 110mm; border: 1px dashed #cbd5e1;
-                display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10mm; background: white;
+                width: 220mm;
+                height: 110mm;
+                border: 1px dashed #cbd5e1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                padding: 10mm;
+                background: white;
             }
         }
-        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: 600; }
-        .subtab-active { background-color: #f59e0b; color: white; }
+
+        .tab-active {
+            border-bottom: 3px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .subtab-active {
+            background-color: #f59e0b;
+            color: white;
+        }
     </style>
 </head>
 <body class="text-slate-800 min-h-screen flex flex-col justify-between">
@@ -334,7 +386,7 @@
                             <h3 class="text-lg font-bold">Résumé de la Paie Mensuelle</h3>
                             <p class="text-xs text-slate-500">Saisie et Validation</p>
                         </div>
-                        
+
                         <div class="flex items-center gap-2 flex-wrap">
 
                             <!-- FILTRE PAR NOM -->
@@ -1164,7 +1216,17 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold mb-1">Sélectionner Article</label>
-                        <select id="st-ac-article" required class="w-full p-2.5 border rounded-xl text-sm font-semibold"></select>
+                        <input type="text"
+                               id="st-ac-article-nom"
+                               list="st-ac-article-liste"
+                               placeholder="Saisir référence ou désignation"
+                               autocomplete="off"
+                               required
+                               class="w-full p-2.5 border rounded-xl text-sm font-semibold">
+
+                        <datalist id="st-ac-article-liste"></datalist>
+
+                        <input type="hidden" id="st-ac-article">
                     </div>
                 </div>
 
@@ -1282,11 +1344,11 @@
             if (!table) return;
             const printContainer = document.getElementById('print-section-area');
             printContainer.innerHTML = `
-                    <div style="padding: 20px;">
-                        <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
-                        ${table.outerHTML}
-                    </div>
-                `;
+                            <div style="padding: 20px;">
+                                <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
+                                ${table.outerHTML}
+                            </div>
+                        `;
             window.print();
             printContainer.innerHTML = '';
         }
@@ -1594,15 +1656,15 @@
             // Aucun résultat
             if (salariesFiltres.length === 0) {
                 tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="text-center py-6 text-slate-400">
-                        ${recherche
+                        <tr>
+                            <td colspan="5" class="text-center py-6 text-slate-400">
+                                ${recherche
                         ? 'Aucun employé trouvé pour cette recherche'
                         : 'Aucune donnée disponible'
                     }
-                    </td>
-                </tr>
-            `;
+                            </td>
+                        </tr>
+                    `;
                 return;
             }
 
@@ -1611,40 +1673,40 @@
 
             salariesFiltres.forEach(s => {
                 tbody.innerHTML += `
-                <tr class="hover:bg-slate-50">
-                    <td class="py-3 px-4 font-bold">${s.nom}</td>
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-bold">${s.nom}</td>
 
-                    <td class="py-3 px-4">
-                        ${s.fonction}
-                    </td>
+                            <td class="py-3 px-4">
+                                ${s.fonction}
+                            </td>
 
-                    <td class="py-3 px-4">
-                        ${s.tauxHs} Dhs
-                    </td>
+                            <td class="py-3 px-4">
+                                ${s.tauxHs} Dhs
+                            </td>
 
-                    <td class="py-3 px-4">
-                        ${s.panier} Dhs
-                    </td>
+                            <td class="py-3 px-4">
+                                ${s.panier} Dhs
+                            </td>
 
-                    <td class="py-3 px-4 text-right">
-                        <div class="flex items-center justify-end gap-3">
-                            <button
-                                onclick="editSalarie('${s.id}')"
-                                class="text-blue-600 hover:text-blue-800"
-                                title="Modifier">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button
-                                onclick="deleteSalarie('${s.id}')"
-                                class="text-rose-600 hover:text-rose-800"
-                                title="Supprimer">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <td class="py-3 px-4 text-right">
+                                <div class="flex items-center justify-end gap-3">
+                                    <button
+                                        onclick="editSalarie('${s.id}')"
+                                        class="text-blue-600 hover:text-blue-800"
+                                        title="Modifier">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button
+                                        onclick="deleteSalarie('${s.id}')"
+                                        class="text-rose-600 hover:text-rose-800"
+                                        title="Supprimer">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
 
-                        </div>
-                    </td>
-                </tr>
-                `;
+                                </div>
+                            </td>
+                        </tr>
+                        `;
             });
         }
 
@@ -1772,7 +1834,7 @@
                 ) || 0
                 : 0;
 
-           // const sal = appState.salaries.find(s => s.id === salId);
+            // const sal = appState.salaries.find(s => s.id === salId);
 
             const pointageData = {
                 date,
@@ -1888,30 +1950,30 @@
             filteredPointages.forEach(p => {
                 let hsBadge = p.hs > 0 ? `<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 font-bold">${p.hs} h</span>` : '<span class="text-slate-400">-</span>';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4">${p.date}</td>
-                        <td class="py-3 px-4 font-bold">${p.salNom}</td>
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
-                        <td class="py-3 px-4">${hsBadge}</td>
-                        <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
-                        <td class="py-3 px-4 text-right">
-                            <div class="flex items-center justify-end gap-3">
-                                <button
-                                    onclick="editPointage('${p.id}')"
-                                    class="text-blue-600 hover:text-blue-800"
-                                    title="Modifier">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
+                                <td class="py-3 px-4">${p.date}</td>
+                                <td class="py-3 px-4 font-bold">${p.salNom}</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
+                                <td class="py-3 px-4">${hsBadge}</td>
+                                <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-3">
+                                        <button
+                                            onclick="editPointage('${p.id}')"
+                                            class="text-blue-600 hover:text-blue-800"
+                                            title="Modifier">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
 
-                                <button
-                                    onclick="deletePointage('${p.id}')"
-                                    class="text-rose-600 hover:text-rose-800"
-                                    title="Supprimer">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                        <button
+                                            onclick="deletePointage('${p.id}')"
+                                            class="text-rose-600 hover:text-rose-800"
+                                            title="Supprimer">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
 
-                            </div>
-                        </td>
-                    </tr>`;
+                                    </div>
+                                </td>
+                            </tr>`;
             });
         }
 
@@ -1983,15 +2045,15 @@
                     : `<button onclick="validatePaie('${id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg border border-amber-300">Valider</button>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-bold">${d.nom}</td>
-                        <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
-                        <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
-                        <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
-                        <td class="py-3 px-4 text-center">${validationBadge}</td>
-                        <td class="py-3 px-4 text-center no-print">
-                            <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
-                        </td>
-                    </tr>`;
+                                <td class="py-3 px-4 font-bold">${d.nom}</td>
+                                <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
+                                <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
+                                <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
+                                <td class="py-3 px-4 text-center">${validationBadge}</td>
+                                <td class="py-3 px-4 text-center no-print">
+                                    <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
+                                </td>
+                            </tr>`;
             });
 
             document.getElementById('total-global-hsupp').innerText = `${grandTotalHs} h`;
@@ -2008,21 +2070,21 @@
         function printSingleEnvelope(nom, fonction, chantier, net) {
             const container = document.getElementById('print-envelopes-container');
             container.innerHTML = `
-                    <div class="envelope-page">
-                        <div class="envelope-box">
-                            <div class="w-full space-y-6 text-center">
-                                <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
-                                <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
-                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
+                            <div class="envelope-page">
+                                <div class="envelope-box">
+                                    <div class="w-full space-y-6 text-center">
+                                        <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
+                                        <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                            <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
+                                            <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
+                                        </div>
+                                        <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                            <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                            <span class="text-xl font-black text-blue-600">${net}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                    <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                    <span class="text-xl font-black text-blue-600">${net}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
+                            </div>`;
             window.print();
             container.innerHTML = '';
         }
@@ -2045,21 +2107,21 @@
                 let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
                 let netAPayer = d.paniers + (d.totalHs * d.tauxHs);
                 container.innerHTML += `
-                        <div class="envelope-page">
-                            <div class="envelope-box">
-                                <div class="w-full space-y-6 text-center">
-                                    <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
-                                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                        <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
-                                        <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
+                                <div class="envelope-page">
+                                    <div class="envelope-box">
+                                        <div class="w-full space-y-6 text-center">
+                                            <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
+                                            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
+                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
+                                            </div>
+                                            <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                                <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                                <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                        <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                        <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>`;
+                                </div>`;
             });
             window.print();
             container.innerHTML = '';
@@ -2387,26 +2449,26 @@
                     if (totalGasoil > 0) {
 
                         montantHtml = `
-            <div class="font-bold text-emerald-700">
-                ${gain.toFixed(2)} Dhs
-            </div>
-            <div class="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
-                ${ligneTotal.toFixed(2)}
-                -
-                <span class="text-rose-600 font-semibold">
-                    ${totalGasoil.toFixed(2)} Gasoil
-                </span>
-            </div>
-        `;
+                    <div class="font-bold text-emerald-700">
+                        ${gain.toFixed(2)} Dhs
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                        ${ligneTotal.toFixed(2)}
+                        -
+                        <span class="text-rose-600 font-semibold">
+                            ${totalGasoil.toFixed(2)} Gasoil
+                        </span>
+                    </div>
+                `;
                         grandTotal += gain;
 
                     } else {
 
                         montantHtml = `
-            <div class="font-bold text-emerald-700">
-                ${ligneTotal.toFixed(2)} Dhs
-            </div>
-        `;
+                    <div class="font-bold text-emerald-700">
+                        ${ligneTotal.toFixed(2)} Dhs
+                    </div>
+                `;
                         grandTotal += ligneTotal;
                     }
 
@@ -2416,49 +2478,49 @@
                     // on affiche son montant mais on ne l'ajoute pas au total des voyages
 
                     montantHtml = `
-        <div class="font-bold text-amber-600">
-            ${ligneTotal.toFixed(2)} Dhs
-        </div>
-    `;
+                <div class="font-bold text-amber-600">
+                    ${ligneTotal.toFixed(2)} Dhs
+                </div>
+            `;
                 }
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 text-xs">${t.date}</td>
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
-                        <td class="py-3 px-4 font-bold">${t.chauffeur || '-'}</td>
-                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
-                        <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
-                        <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
-                        <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
-                        <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
-                        <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
-                        <td class="py-3 px-4 text-right">
-                            ${montantHtml}
-                        </td>
-                        <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
-                        <td class="py-3 px-4 text-right no-print">
-                            <div class="flex items-center justify-end gap-3">
+                                <td class="py-3 px-4 text-xs">${t.date}</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
+                                <td class="py-3 px-4 font-bold">${t.chauffeur || '-'}</td>
+                                <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
+                                <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
+                                <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
+                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
+                                <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
+                                <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
+                                <td class="py-3 px-4 text-right">
+                                    ${montantHtml}
+                                </td>
+                                <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
+                                <td class="py-3 px-4 text-right no-print">
+                                    <div class="flex items-center justify-end gap-3">
 
-                                <button
-                                    onclick="${t.type === 'Gasoil'
-                                                        ? `editGasoil('${t.id}')`
-                                                        : `editTransport('${t.id}')`}"
-                                    class="text-blue-600 hover:text-blue-800"
-                                    title="Modifier">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
+                                        <button
+                                            onclick="${t.type === 'Gasoil'
+                        ? `editGasoil('${t.id}')`
+                        : `editTransport('${t.id}')`}"
+                                            class="text-blue-600 hover:text-blue-800"
+                                            title="Modifier">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
 
-                                <button
-                                    onclick="deleteTransport('${t.id}')"
-                                    class="text-rose-600 hover:text-rose-800"
-                                    title="Supprimer">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                        <button
+                                            onclick="deleteTransport('${t.id}')"
+                                            class="text-rose-600 hover:text-rose-800"
+                                            title="Supprimer">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
 
-                            </div>
-                        </td>
-                    </tr>`;
+                                    </div>
+                                </td>
+                            </tr>`;
             });
 
             document.getElementById('total-global-transport').innerText = `${grandTotal.toFixed(2)} Dhs`;
@@ -2908,42 +2970,42 @@
                 let effetDateText = (e.statut === 'Effet Reporté' && e.effetDate) ? `<br><span class="text-xs text-amber-600 font-bold">Reporté au: ${e.effetDate}</span>` : '';
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
-                        <td class="py-3 px-4 font-bold">${e.numero}</td>
-                        <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
-                        <td class="py-3 px-4">${e.serviceType || '-'}</td>
-                        <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
-                        <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
-                        <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
-                        <td class="py-3 px-4 text-center">
-                            <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
-                                <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
-                                <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
-                                <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
-                                <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
-                                <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
-                            </select>
-                        </td>
-                        <td class="py-3 px-4 text-right no-print">
-                            <div class="flex items-center justify-end gap-3">
+                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
+                                <td class="py-3 px-4 font-bold">${e.numero}</td>
+                                <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
+                                <td class="py-3 px-4">${e.serviceType || '-'}</td>
+                                <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
+                                <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
+                                <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
+                                <td class="py-3 px-4 text-center">
+                                    <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
+                                        <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
+                                        <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
+                                        <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
+                                        <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
+                                        <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
+                                    </select>
+                                </td>
+                                <td class="py-3 px-4 text-right no-print">
+                                    <div class="flex items-center justify-end gap-3">
 
-                                <button
-                                    onclick="editEffet('${e.id}')"
-                                    class="text-blue-600 hover:text-blue-800"
-                                    title="Modifier">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
+                                        <button
+                                            onclick="editEffet('${e.id}')"
+                                            class="text-blue-600 hover:text-blue-800"
+                                            title="Modifier">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
 
-                                <button
-                                    onclick="deleteEffet('${e.id}')"
-                                    class="text-rose-600 hover:text-rose-800"
-                                    title="Supprimer">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
+                                        <button
+                                            onclick="deleteEffet('${e.id}')"
+                                            class="text-rose-600 hover:text-rose-800"
+                                            title="Supprimer">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
 
-                            </div>
-                        </td>
-                    </tr>`;
+                                    </div>
+                                </td>
+                            </tr>`;
             });
         }
 
@@ -2998,15 +3060,26 @@
 
         // STOCK LOGIC
         function updateStockDropdowns() {
+            const achatListe = document.getElementById('st-ac-article-liste');
             const sortieListe = document.getElementById('st-so-article-liste');
+
+            if (achatListe) {
+                achatListe.innerHTML = '';
+
+                appState.stockArticles.forEach(article => {
+                    achatListe.innerHTML += `
+                        <option value="${article.ref} - ${article.nom}"></option>
+                    `;
+                });
+            }
 
             if (sortieListe) {
                 sortieListe.innerHTML = '';
 
                 appState.stockArticles.forEach(article => {
                     sortieListe.innerHTML += `
-                     <option value="${article.ref} - ${article.nom}"></option>
-                 `;
+                        <option value="${article.ref} - ${article.nom}"></option>
+                    `;
                 });
             }
         }
@@ -3141,21 +3214,55 @@
 
                 alert("Erreur lors de l'enregistrement de l'article.");
             }
-           
+
         }
 
         async function saveStockAchat(e) {
             e.preventDefault();
+
+            const articleSaisi = document
+                .getElementById('st-ac-article-nom')
+                .value
+                .trim()
+                .toLowerCase();
+
+            const article = appState.stockArticles.find(a =>
+                `${a.ref} - ${a.nom}`.trim().toLowerCase() === articleSaisi
+            );
+
+            if (!article) {
+                alert("Veuillez sélectionner un article existant.");
+                return;
+            }
+
             const achat = {
                 date: document.getElementById('st-ac-date').value,
-                articleId: document.getElementById('st-ac-article').value,
+                articleId: article.id,
                 quantite: parseInt(document.getElementById('st-ac-qte').value) || 0,
                 prix: parseFloat(document.getElementById('st-ac-prix').value) || 0,
                 fournisseur: document.getElementById('st-ac-fournisseur').value.trim(),
                 bl: document.getElementById('st-ac-bl').value || '-'
             };
-            const docRef = await addDoc(collection(window.db, "stock_achats"), achat);
-            appState.stockAchats.push({ id: docRef.id, ...achat });
+
+            const docRef = await addDoc(
+                collection(window.db, "stock_achats"),
+                achat
+            );
+
+            appState.stockAchats.push({
+                id: docRef.id,
+                ...achat
+            });
+
+            // Vider les champs après enregistrement
+            document.getElementById('st-ac-date').value = '';
+            document.getElementById('st-ac-article-nom').value = '';
+            document.getElementById('st-ac-article').value = '';
+            document.getElementById('st-ac-qte').value = '1';
+            document.getElementById('st-ac-prix').value = '';
+            document.getElementById('st-ac-fournisseur').value = '';
+            document.getElementById('st-ac-bl').value = '';
+
             closeAchatModal();
             renderStockInventoryTable();
             renderAchatsTable();
@@ -3189,6 +3296,9 @@
 
             if (qteSortie > resteActuel) {
                 alert(`Attention: Quantité insuffisante en stock! Reste disponible: ${resteActuel}`);
+                EmptySortieFields();
+                closeSortieModal();
+                return;
             }
 
             const sortie = {
@@ -3202,6 +3312,15 @@
             const docRef = await addDoc(collection(window.db, "stock_sorties"), sortie);
 
             appState.stockSorties.push({ id: docRef.id, ...sortie });
+
+            EmptySortieFields();
+            closeSortieModal();
+            renderStockInventoryTable();
+            renderSortiesTable();
+            renderAlertesTable();
+        }
+
+        function EmptySortieFields() {
             // Vider le formulaire de sortie stock
             document.getElementById('st-so-date').value = '';
             document.getElementById('st-so-article-nom').value = '';
@@ -3210,13 +3329,7 @@
             document.getElementById('st-so-preneur').value = '';
             document.getElementById('st-so-lieu').value = '';
             document.getElementById('st-so-chantier').value = '';
-
-            closeSortieModal();
-            renderStockInventoryTable();
-            renderSortiesTable();
-            renderAlertesTable();
         }
-
         async function deleteStockArticle(artId) {
             if (!confirm("Êtes-vous sûr de vouloir supprimer cet article du stock ?")) return;
             try {
@@ -3273,23 +3386,23 @@
                     `<span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> OK</span>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                        <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                        <td class="py-3 px-4 text-slate-600 font-semibold">${art.marque || '-'}</td>
-                        <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
-                        <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
-                        <td class="py-3 px-4 text-center">${resteBadge}</td>
-                        <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
-                        <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
-                         <button onclick="editStockArticle('${art.id}')"
-                                class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
-                                title="Modifier article">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                            ${actionBtn}
-                            <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>`;
+                                <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                                <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                                <td class="py-3 px-4 text-slate-600 font-semibold">${art.marque || '-'}</td>
+                                <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
+                                <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
+                                <td class="py-3 px-4 text-center">${resteBadge}</td>
+                                <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
+                                <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
+                                 <button onclick="editStockArticle('${art.id}')"
+                                        class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
+                                        title="Modifier article">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                    ${actionBtn}
+                                    <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
+                                </td>
+                            </tr>`;
             });
         }
 
@@ -3304,14 +3417,14 @@
                 let art = appState.stockArticles.find(a => a.id === ac.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
-                        <td class="py-3 px-4 font-bold">${artNom}</td>
-                        <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
-                        <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
-                        <td class="py-3 px-4">${ac.fournisseur}</td>
-                        <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
-                        <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                    </tr>`;
+                                <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
+                                <td class="py-3 px-4 font-bold">${artNom}</td>
+                                <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
+                                <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
+                                <td class="py-3 px-4">${ac.fournisseur}</td>
+                                <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
+                                <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                            </tr>`;
             });
         }
 
@@ -3334,14 +3447,14 @@
                 let art = appState.stockArticles.find(a => a.id === so.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                        <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
-                        <td class="py-3 px-4 font-bold">${artNom}</td>
-                        <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
-                        <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
-                        <td class="py-3 px-4 text-xs">${so.preneur}</td>
-                        <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
-                        <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                    </tr>`;
+                                <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
+                                <td class="py-3 px-4 font-bold">${artNom}</td>
+                                <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
+                                <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
+                                <td class="py-3 px-4 text-xs">${so.preneur}</td>
+                                <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
+                                <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                            </tr>`;
             });
         }
 
@@ -3369,17 +3482,17 @@
                     let meilleurFournisseur = achatsArticle.length > 0 ? achatsArticle[achatsArticle.length - 1].fournisseur : 'Aucun historique';
 
                     tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                            <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                            <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
-                            <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
-                            <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
-                            <td class="py-3 px-4 text-center no-print">
-                                <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
-                                    <i class="fa-solid fa-cart-plus"></i> Commander
-                                </button>
-                            </td>
-                        </tr>`;
+                                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                                    <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                                    <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
+                                    <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
+                                    <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
+                                    <td class="py-3 px-4 text-center no-print">
+                                        <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
+                                            <i class="fa-solid fa-cart-plus"></i> Commander
+                                        </button>
+                                    </td>
+                                </tr>`;
                 }
             });
 

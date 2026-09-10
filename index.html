@@ -3189,6 +3189,9 @@
 
             if (qteSortie > resteActuel) {
                 alert(`Attention: Quantité insuffisante en stock! Reste disponible: ${resteActuel}`);
+                EmptySortieFields();
+                closeSortieModal();
+                return;
             }
 
             const sortie = {
@@ -3202,6 +3205,15 @@
             const docRef = await addDoc(collection(window.db, "stock_sorties"), sortie);
 
             appState.stockSorties.push({ id: docRef.id, ...sortie });
+           
+            EmptySortieFields();
+            closeSortieModal();
+            renderStockInventoryTable();
+            renderSortiesTable();
+            renderAlertesTable();
+        }
+
+        function EmptySortieFields() {
             // Vider le formulaire de sortie stock
             document.getElementById('st-so-date').value = '';
             document.getElementById('st-so-article-nom').value = '';
@@ -3210,13 +3222,7 @@
             document.getElementById('st-so-preneur').value = '';
             document.getElementById('st-so-lieu').value = '';
             document.getElementById('st-so-chantier').value = '';
-
-            closeSortieModal();
-            renderStockInventoryTable();
-            renderSortiesTable();
-            renderAlertesTable();
         }
-
         async function deleteStockArticle(artId) {
             if (!confirm("Êtes-vous sûr de vouloir supprimer cet article du stock ?")) return;
             try {

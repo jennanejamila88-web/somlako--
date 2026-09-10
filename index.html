@@ -1332,74 +1332,141 @@
             location.reload();
         }
 
-        async function initAppFromFirebase() {
-            try {
-                const salSnap = await getDocs(collection(window.db, "salaries"));
-                appState.salaries = [];
-                salSnap.forEach(docSnap => appState.salaries.push({ id: docSnap.id, ...docSnap.data() }));
+        // Chargement à la demande : une collection n'est lue que lorsque son module est ouvert.
+        const dataLoaded = {
+            salaries: false,
+            pointages: false,
+            transport: false,
+            effets: false,
+            stock: false
+        };
 
-                const poiSnap = await getDocs(collection(window.db, "pointages"));
-                appState.pointages = [];
-                poiSnap.forEach(docSnap => appState.pointages.push({ id: docSnap.id, ...docSnap.data() }));
+        const dataLoading = {};
 
-                const traSnap = await getDocs(collection(window.db, "transport"));
-                appState.transport = [];
-                traSnap.forEach(docSnap => appState.transport.push({ id: docSnap.id, ...docSnap.data() }));
+        async function loadOnce(key, loader) {
+            if (dataLoaded[key]) return;
+            if (dataLoading[key]) return dataLoading[key];
 
-                const effSnap = await getDocs(collection(window.db, "effets"));
-                appState.effets = [];
-                effSnap.forEach(docSnap => appState.effets.push({ id: docSnap.id, ...docSnap.data() }));
+            dataLoading[key] = (async () => {
+                try {
+                    await loader();
+                    dataLoaded[key] = true;
+                } catch (err) {
+                    console.error(`Erreur de chargement ${key}:`, err);
+                    throw err;
+                } finally {
+                    delete dataLoading[key];
+                }
+            })();
 
-                const artSnap = await getDocs(collection(window.db, "stock_articles"));
-                appState.stockArticles = [];
-                artSnap.forEach(docSnap => appState.stockArticles.push({ id: docSnap.id, ...docSnap.data() }));
+            return dataLoading[key];
+        }
 
-                const achSnap = await getDocs(collection(window.db, "stock_achats"));
-                appState.stockAchats = [];
-                achSnap.forEach(docSnap => appState.stockAchats.push({ id: docSnap.id, ...docSnap.data() }));
+        async function loadSalaries() {
+            await loadOnce('salaries', async () => {
+                const snap = await getDocs(collection(window.db, "salaries"));
+                appState.salaries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderSalariesTable();
+                updateSalariesDropdown();
+            });
+        }
 
-                const sorSnap = await getDocs(collection(window.db, "stock_sorties"));
-                appState.stockSorties = [];
-                sorSnap.forEach(docSnap => appState.stockSorties.push({ id: docSnap.id, ...docSnap.data() }));
+        async function loadPointageData() {
+            await loadOnce('pointages', async () => {
+                const [poiSnap, valSnap] = await Promise.all([
+                    getDocs(collection(window.db, "pointages")),
+                    getDocs(collection(window.db, "paie_validations"))
+                ]);
 
-                const valSnap = await getDocs(collection(window.db, "paie_validations"));
+                appState.pointages = poiSnap.docs.map(d => ({ id: d.id, ...d.data() }));
                 appState.paieValidations = {};
-                valSnap.forEach(docSnap => { appState.paieValidations[docSnap.id] = docSnap.data().statut; });
+                valSnap.forEach(d => { appState.paieValidations[d.id] = d.data().statut; });
 
+                renderPointagesTable();
+                updateChantiersDropdown();
+            });
+        }
+
+        async function loadTransportData() {
+            await loadOnce('transport', async () => {
+                const snap = await getDocs(collection(window.db, "transport"));
+                appState.transport = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderTransportTable();
+                updateTransportDropdowns();
+            });
+        }
+
+        async function loadEffetsData() {
+            await loadOnce('effets', async () => {
+                const snap = await getDocs(collection(window.db, "effets"));
+                appState.effets = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderEffetsTable();
+            });
+        }
+
+        async function loadStockData() {
+            await loadOnce('stock', async () => {
+                const [artSnap, achSnap, sorSnap] = await Promise.all([
+                    getDocs(collection(window.db, "stock_articles")),
+                    getDocs(collection(window.db, "stock_achats")),
+                    getDocs(collection(window.db, "stock_sorties"))
+                ]);
+
+                appState.stockArticles = artSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                appState.stockAchats = achSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                appState.stockSorties = sorSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                renderStockInventoryTable();
+                renderAchatsTable();
+                renderSortiesTable();
+                renderAlertesTable();
+                updateStockDropdowns();
+            });
+        }
+
+        async function initAppFromFirebase() {
+            // Au démarrage, on ne charge que le personnel, nécessaire au premier écran du module 1.
+            // Les historiques lourds sont chargés seulement quand l'utilisateur ouvre leur module.
+            try {
+                await loadSalaries();
             } catch (err) {
                 console.error("Erreur de chargement Firebase:", err);
             }
-
-            renderSalariesTable();
-            renderPointagesTable();
-            renderTransportTable();
-            renderEffetsTable();
-            renderStockInventoryTable();
-            renderAchatsTable();
-            renderSortiesTable();
-            renderAlertesTable();
-            updateSalariesDropdown();
-            updateChantiersDropdown();
-            updateTransportDropdowns();
-            updateStockDropdowns();
         }
 
-        function switchMainView(v) {
+        async function switchMainView(v) {
             ['home', 'module1', 'module2', 'module3', 'module4'].forEach(m => document.getElementById(`view-${m}`).classList.add('hidden'));
             document.getElementById(`view-${v}`).classList.remove('hidden');
             if (v === 'home') document.getElementById('nav-home-btn').classList.add('hidden');
             else document.getElementById('nav-home-btn').classList.remove('hidden');
+
+            try {
+                if (v === 'module1') await loadSalaries();
+                if (v === 'module2') await loadTransportData();
+                if (v === 'module3') await loadEffetsData();
+                if (v === 'module4') await loadStockData();
+            } catch (err) {
+                alert("Impossible de charger les données de ce module. Vérifiez la connexion puis réessayez.");
+            }
         }
 
-        function switchSubModule1(sub) {
+        async function switchSubModule1(sub) {
             ['salaries', 'pointage', 'journal'].forEach(s => {
                 document.getElementById(`subview-${s}`).classList.add('hidden');
                 document.getElementById(`tab-${s}`).classList.remove('tab-active');
             });
             document.getElementById(`subview-${sub}`).classList.remove('hidden');
             document.getElementById(`tab-${sub}`).classList.add('tab-active');
-            if (sub === 'journal') renderPaieSummary();
-            if (sub === 'pointage') updateChantiersDropdown();
+
+            try {
+                if (sub === 'pointage' || sub === 'journal') {
+                    await loadPointageData();
+                }
+                if (sub === 'journal') renderPaieSummary();
+                if (sub === 'pointage') updateChantiersDropdown();
+            } catch (err) {
+                alert("Impossible de charger les données de pointage. Vérifiez la connexion puis réessayez.");
+            }
         }
 
         function switchStockTab(st) {
@@ -2431,7 +2498,7 @@
             const pu =
                 parseFloat(document.getElementById('g-pu').value) || 0;
 
-            document.getElementById('g-total').value =
+            document.getElementById('g-total').innerText =
                 (qte * pu).toFixed(2);
         }
 

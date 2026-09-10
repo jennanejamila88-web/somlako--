@@ -241,7 +241,18 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold mb-1">Employé</label>
-                            <select id="p-salarie" required class="w-full p-2 bg-white border rounded-lg text-sm"></select>
+
+                            <input type="text"
+                                   id="p-salarie-nom"
+                                   list="p-salarie-liste"
+                                   placeholder="Sélectionner ou saisir un employé"
+                                   autocomplete="off"
+                                   required
+                                   class="w-full p-2 bg-white border rounded-lg text-sm">
+
+                            <datalist id="p-salarie-liste"></datalist>
+
+                            <input type="hidden" id="p-salarie">
                         </div>
                         <div>
                             <label class="block text-xs font-semibold mb-1">Chantier</label>
@@ -1608,10 +1619,41 @@
 
 
         function updateSalariesDropdown() {
-            const sel = document.getElementById('p-salarie');
-            if (!sel) return;
-            sel.innerHTML = '<option value="">Sélectionner un employé</option>';
-            appState.salaries.forEach(s => sel.innerHTML += `<option value="${s.id}">${s.nom}</option>`);
+            const liste = document.getElementById('p-salarie-liste');
+            if (!liste) return;
+
+            liste.innerHTML = '';
+
+            appState.salaries.forEach(s => {
+                liste.innerHTML += `<option value="${s.nom}"></option>`;
+            });
+        }
+
+        function filterSalariePointage() {
+            const recherche = document
+                .getElementById('p-salarie-recherche')
+                .value
+                .trim()
+                .toLowerCase();
+
+            const select = document.getElementById('p-salarie');
+
+            select.innerHTML =
+                '<option value="">Sélectionner un employé</option>';
+
+            appState.salaries
+                .filter(s =>
+                    (s.nom || '').toLowerCase().includes(recherche)
+                )
+                .forEach(s => {
+                    select.innerHTML +=
+                        `<option value="${s.id}">${s.nom}</option>`;
+                });
+
+            // S'il ne reste qu'un employé, le sélectionner automatiquement
+            if (select.options.length === 2) {
+                select.selectedIndex = 1;
+            }
         }
 
         async function savePointage(e) {
@@ -1620,7 +1662,25 @@
             const id = document.getElementById('p-id').value;
 
             const date = document.getElementById('p-date').value;
-            const salId = document.getElementById('p-salarie').value;
+
+            const salNomSaisi = document
+                .getElementById('p-salarie-nom')
+                .value
+                .trim()
+                .toLowerCase();
+
+            const sal = appState.salaries.find(s =>
+                (s.nom || '').trim().toLowerCase() === salNomSaisi
+            );
+
+            if (!sal) {
+                alert("Veuillez sélectionner un employé existant.");
+                return;
+            }
+
+            const salId = sal.id;
+
+
             const chantier = document.getElementById('p-chantier').value.trim();
 
             const hs =
@@ -1635,7 +1695,7 @@
                 ) || 0
                 : 0;
 
-            const sal = appState.salaries.find(s => s.id === salId);
+           // const sal = appState.salaries.find(s => s.id === salId);
 
             const pointageData = {
                 date,
@@ -1793,7 +1853,8 @@
 
             document.getElementById('p-id').value = p.id;
             document.getElementById('p-date').value = p.date;
-            document.getElementById('p-salarie').value = p.salId;
+            document.getElementById('p-salarie-nom').value = p.salNom || '';
+            document.getElementById('p-salarie').value = p.salId || '';
             document.getElementById('p-chantier').value = p.chantier;
             document.getElementById('p-hs').value = p.hs || 0;
 

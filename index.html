@@ -3294,10 +3294,16 @@
             let totalSorti = appState.stockSorties.filter(s => s.articleId === artId).reduce((sum, s) => sum + s.quantite, 0);
             let resteActuel = totalAchete - totalSorti;
 
-            if (qteSortie > resteActuel) {
-                alert(`Attention: Quantité insuffisante en stock! Reste disponible: ${resteActuel}`);
+            if (resteActuel <= 0) {
+                alert("Stock épuisé. Aucune sortie n'est possible.");
                 EmptySortieFields();
                 closeSortieModal();
+                return;
+            }
+
+            if (qteSortie > resteActuel) {
+                alert(`Attention: Quantité insuffisante en stock! Vous pouvez sortir au maximum ${resteActuel} unité(s).`);
+                document.getElementById('st-so-qte').value = resteActuel;
                 return;
             }
 

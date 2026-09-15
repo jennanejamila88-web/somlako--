@@ -431,6 +431,7 @@
                                     <th class="py-3 px-4">Employé</th>
                                     <th class="py-3 px-4 text-center">Total H.Supp</th>
                                     <th class="py-3 px-4 text-right">Total Paniers</th>
+                                    <th class="py-3 px-4 text-center">Jours avec Panier</th>
                                     <th class="py-3 px-4 text-right">Net à Payer</th>
                                     <th class="py-3 px-4 text-center">Validation</th>
                                     <th class="py-3 px-4 text-center no-print">Enveloppe DL</th>
@@ -442,6 +443,7 @@
                                     <td class="py-4 px-4 text-slate-800">TOTAL GLOBAL</td>
                                     <td class="py-4 px-4 text-center text-blue-700" id="total-global-hsupp">0 h</td>
                                     <td class="py-4 px-4 text-right text-slate-800" id="total-global-paniers">0 Dhs</td>
+                                    <td class="py-4 px-4 text-center">-</td>
                                     <td class="py-4 px-4 text-right text-emerald-600 text-lg" id="total-global-net">0 Dhs</td>
                                     <td colspan="2" class="py-4 px-4"></td>
                                 </tr>
@@ -2018,11 +2020,14 @@
             let grandTotalPaniers = 0;
             let grandTotalNet = 0;
 
-            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
+            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, joursPanier: 0, chantiers: new Set() });
 
             appState.pointages.forEach(p => {
                 if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
+                    if (p.panierActive) {
+                        summary[p.salId].joursPanier++;
+                    }
                     summary[p.salId].totalHs += (p.hs || 0);
                     if (p.chantier) summary[p.salId].chantiers.add(p.chantier);
                 }
@@ -2048,6 +2053,7 @@
                                 <td class="py-3 px-4 font-bold">${d.nom}</td>
                                 <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
                                 <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
+                                <td class="py-3 px-4 text-center font-semibold">${d.joursPanier}</td>
                                 <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
                                 <td class="py-3 px-4 text-center">${validationBadge}</td>
                                 <td class="py-3 px-4 text-center no-print">
@@ -2093,10 +2099,13 @@
             const container = document.getElementById('print-envelopes-container');
             container.innerHTML = '';
             let summary = {};
-            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, chantiers: new Set() });
+            appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, joursPanier: 0, chantiers: new Set() });
             appState.pointages.forEach(p => {
                 if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
+                    if (p.panierActive) {
+                        summary[p.salId].joursPanier++;
+                    }
                     summary[p.salId].totalHs += (p.hs || 0);
                     if (p.chantier) summary[p.salId].chantiers.add(p.chantier);
                 }

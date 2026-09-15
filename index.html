@@ -386,6 +386,34 @@
                             <h3 class="text-lg font-bold">Résumé de la Paie Mensuelle</h3>
                             <p class="text-xs text-slate-500">Saisie et Validation</p>
                         </div>
+                        <div class="flex items-end gap-3 flex-wrap no-print">
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                    Date début
+                                </label>
+                                <input type="date"
+                                       id="paie-date-debut"
+                                       class="p-2 border border-slate-200 rounded-xl text-xs">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                    Date fin
+                                </label>
+                                <input type="date"
+                                       id="paie-date-fin"
+                                       class="p-2 border border-slate-200 rounded-xl text-xs">
+                            </div>
+
+                            <button type="button"
+                                    onclick="loadPaiePeriode()"
+                                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                Charger la paie
+                            </button>
+
+                        </div>
 
                         <div class="flex items-center gap-2 flex-wrap">
 
@@ -1533,11 +1561,14 @@
             document.getElementById(`tab-${sub}`).classList.add('tab-active');
 
             try {
-                if (sub === 'pointage' || sub === 'journal') {
+                if (sub === 'pointage') {
                     await loadPointageData();
+                    updateChantiersDropdown();
                 }
-                if (sub === 'journal') renderPaieSummary();
-                if (sub === 'pointage') updateChantiersDropdown();
+
+                if (sub === 'journal') {
+                    renderPaieSummary();
+                }
             } catch (err) {
                 alert("Impossible de charger les données de pointage. Vérifiez la connexion puis réessayez.");
             }
@@ -2012,9 +2043,72 @@
             });
         }
 
+        let paiePointages = [];
+        let paiePeriode = {
+            debut: '',
+            fin: ''
+        };
+        async function loadPaiePeriode() {
+
+            const dateDebut = document.getElementById('paie-date-debut').value;
+            const dateFin = document.getElementById('paie-date-fin').value;
+
+            if (!dateDebut || !dateFin) {
+                alert("Veuillez sélectionner une date de début et une date de fin.");
+                return;
+            }
+
+            if (dateDebut > dateFin) {
+                alert("La date de début ne peut pas être supérieure à la date de fin.");
+                return;
+            }
+
+            try {
+
+                const q = query(
+                    collection(window.db, "pointages"),
+                    where("date", ">=", dateDebut),
+                    where("date", "<=", dateFin)
+                );
+
+                const snap = await getDocs(q);
+
+                paiePointages = snap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                }));
+
+                paiePeriode.debut = dateDebut;
+                paiePeriode.fin = dateFin;
+
+                renderPaieSummary();
+
+            } catch (err) {
+                console.error("Erreur chargement période de paie :", err);
+                alert("Impossible de charger la période de paie.");
+            }
+        }
+
         function renderPaieSummary() {
             const tbody = document.getElementById('table-paie-body');
             tbody.innerHTML = '';
+            if (!paiePeriode.debut || !paiePeriode.fin) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="py-10 text-center text-slate-400">
+                        Sélectionnez une date de début et une date de fin,
+                        puis cliquez sur "Charger la paie".
+                    </td>
+                </tr>
+            `;
+
+                document.getElementById('total-global-hsupp').innerText = '0 h';
+                document.getElementById('total-global-paniers').innerText = '0 Dhs';
+                document.getElementById('total-global-net').innerText = '0 Dhs';
+
+                return;
+            }
+
             let summary = {};
             let grandTotalHs = 0;
             let grandTotalPaniers = 0;
@@ -2022,7 +2116,7 @@
 
             appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, joursPanier: 0, chantiers: new Set() });
 
-            appState.pointages.forEach(p => {
+            paiePointages.forEach(p => {
                 if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
                     if (p.panierActive) {
@@ -2100,7 +2194,7 @@
             container.innerHTML = '';
             let summary = {};
             appState.salaries.forEach(s => summary[s.id] = { nom: s.nom, fonction: s.fonction, tauxHs: s.tauxHs || 0, totalHs: 0, paniers: 0, joursPanier: 0, chantiers: new Set() });
-            appState.pointages.forEach(p => {
+            paiePointages.forEach(p => {
                 if (summary[p.salId]) {
                     summary[p.salId].paniers += p.panierMontant;
                     if (p.panierActive) {

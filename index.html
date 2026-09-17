@@ -324,6 +324,36 @@
                         </div>
                     </form>
 
+                    <!-- PÉRIODE HISTORIQUE POINTAGE -->
+                    <div class="flex items-end gap-3 flex-wrap bg-blue-50 border border-blue-100 p-4 rounded-xl no-print">
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                Date début
+                            </label>
+                            <input type="date"
+                                   id="pointage-date-debut"
+                                   class="p-2 bg-white border border-slate-200 rounded-xl text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                                Date fin
+                            </label>
+                            <input type="date"
+                                   id="pointage-date-fin"
+                                   class="p-2 bg-white border border-slate-200 rounded-xl text-sm">
+                        </div>
+
+                        <button type="button"
+                                onclick="loadPointagePeriode()"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            Charger les pointages
+                        </button>
+
+                    </div>
+
                     <div class="flex items-center justify-between bg-slate-50 p-4 rounded-xl no-print">
                         <div class="flex items-center gap-6 flex-wrap">
 
@@ -1473,20 +1503,76 @@
             });
         }
 
+        //async function loadPointageData() {
+        //    await loadOnce('pointages', async () => {
+        //        const [poiSnap, valSnap] = await Promise.all([
+        //            getDocs(collection(window.db, "pointages")),
+        //            getDocs(collection(window.db, "paie_validations"))
+        //        ]);
+
+        //        appState.pointages = poiSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        //        appState.paieValidations = {};
+        //        valSnap.forEach(d => { appState.paieValidations[d.id] = d.data().statut; });
+
+        //        renderPointagesTable();
+        //        updateChantiersDropdown();
+        //    });
+        //}
+
+        let pointagePeriode = {
+            debut: '',
+            fin: ''
+        };
+
         async function loadPointageData() {
-            await loadOnce('pointages', async () => {
-                const [poiSnap, valSnap] = await Promise.all([
-                    getDocs(collection(window.db, "pointages")),
-                    getDocs(collection(window.db, "paie_validations"))
-                ]);
+            appState.pointages = [];
+            renderPointagesTable();
+            updateChantiersDropdown();
+        }
 
-                appState.pointages = poiSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                appState.paieValidations = {};
-                valSnap.forEach(d => { appState.paieValidations[d.id] = d.data().statut; });
+        async function loadPointagePeriode() {
 
-                renderPointagesTable();
+            const dateDebut =
+                document.getElementById('pointage-date-debut').value;
+
+            const dateFin =
+                document.getElementById('pointage-date-fin').value;
+
+            if (!dateDebut || !dateFin) {
+                alert("Veuillez sélectionner une date de début et une date de fin.");
+                return;
+            }
+
+            if (dateDebut > dateFin) {
+                alert("La date de début ne peut pas être supérieure à la date de fin.");
+                return;
+            }
+
+            try {
+
+                const q = window.query(
+                    window.collection(window.db, "pointages"),
+                    window.where("date", ">=", dateDebut),
+                    window.where("date", "<=", dateFin)
+                );
+
+                const snap = await window.getDocs(q);
+
+                appState.pointages = snap.docs.map(d => ({
+                    id: d.id,
+                    ...d.data()
+                }));
+
+                pointagePeriode.debut = dateDebut;
+                pointagePeriode.fin = dateFin;
+
                 updateChantiersDropdown();
-            });
+                renderPointagesTable();
+
+            } catch (err) {
+                console.error("Erreur chargement période de pointage :", err);
+                alert("Impossible de charger la période de pointage.");
+            }
         }
 
         async function loadTransportData() {
@@ -1828,6 +1914,13 @@
             }
         }
 
+        function formatDatePointage(date) {
+            if (!date) return '';
+
+            const [annee, mois, jour] = date.split('-');
+            return `${jour}/${mois}/${annee}`;
+        }
+
         async function savePointage(e) {
             e.preventDefault();
 
@@ -1909,15 +2002,48 @@
                 // ============================
                 else {
 
-                    const docRef = await addDoc(
-                        collection(window.db, "pointages"),
+                    const docRef = await window.addDoc(
+                        window.collection(window.db, "pointages"),
                         pointageData
                     );
 
-                    appState.pointages.push({
-                        id: docRef.id,
-                        ...pointageData
-                    });
+                    // Si aucune période n'est chargée, le pointage est simplement enregistré.
+                    if (!pointagePeriode.debut || !pointagePeriode.fin) {
+
+                        alert(
+                            "Pointage enregistré avec succès.\n\n" +
+                            "Aucune période d'historique n'est actuellement chargée."
+                        );
+
+                    }
+
+                    // Le pointage appartient à la période actuellement affichée.
+                    else if (
+                        date >= pointagePeriode.debut &&
+                        date <= pointagePeriode.fin
+                    ) {
+
+                        appState.pointages.push({
+                            id: docRef.id,
+                            ...pointageData
+                        });
+
+                    }
+
+                    // Le pointage est enregistré mais se trouve hors de la période affichée.
+                    else {
+
+                        const datePointage = formatDatePointage(date);
+                        const dateDebut = formatDatePointage(pointagePeriode.debut);
+                        const dateFin = formatDatePointage(pointagePeriode.fin);
+
+                        alert(
+                            `Pointage enregistré avec succès.\n\n` +
+                            `Attention : le pointage du ${datePointage} est en dehors de la période actuellement affichée ` +
+                            `(du ${dateDebut} au ${dateFin}).\n\n` +
+                            `Il n'apparaîtra donc pas dans cet historique.`
+                        );
+                    }
                 }
 
                 // Réinitialiser le mode modification
@@ -1980,9 +2106,10 @@
                 return;
             }
 
+            let html = '';
             filteredPointages.forEach(p => {
                 let hsBadge = p.hs > 0 ? `<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 font-bold">${p.hs} h</span>` : '<span class="text-slate-400">-</span>';
-                tbody.innerHTML += `<tr class="hover:bg-slate-50">
+                html += `<tr class="hover:bg-slate-50">
                                 <td class="py-3 px-4">${p.date}</td>
                                 <td class="py-3 px-4 font-bold">${p.salNom}</td>
                                 <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
@@ -2008,6 +2135,7 @@
                                 </td>
                             </tr>`;
             });
+            tbody.innerHTML = html;
         }
 
         async function deletePointage(id) {

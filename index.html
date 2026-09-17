@@ -2065,13 +2065,13 @@
 
             try {
 
-                const q = query(
-                    collection(window.db, "pointages"),
-                    where("date", ">=", dateDebut),
-                    where("date", "<=", dateFin)
+                const q = window.query(
+                    window.collection(window.db, "pointages"),
+                    window.where("date", ">=", dateDebut),
+                    window.where("date", "<=", dateFin)
                 );
 
-                const snap = await getDocs(q);
+                const snap = await window.getDocs(q);
 
                 paiePointages = snap.docs.map(d => ({
                     id: d.id,
@@ -2108,7 +2108,6 @@
 
                 return;
             }
-
             let summary = {};
             let grandTotalHs = 0;
             let grandTotalPaniers = 0;

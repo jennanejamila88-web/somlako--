@@ -3198,6 +3198,9 @@
             filtered.forEach(e => {
                 let scanBadge = e.scan ? `<a href="${e.scan}" target="_blank" class="text-blue-600 underline font-semibold text-xs">Voir Scan</a>` : '<span class="text-slate-400">Aucun</span>';
                 let effetDateText = (e.statut === 'Effet Reporté' && e.effetDate) ? `<br><span class="text-xs text-amber-600 font-bold">Reporté au: ${e.effetDate}</span>` : '';
+                let statutClass = e.statut === 'Encaissé'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-slate-50 text-slate-800';
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
                                 <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
@@ -3208,7 +3211,7 @@
                                 <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
                                 <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
                                 <td class="py-3 px-4 text-center">
-                                    <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg bg-slate-50 font-semibold">
+                                    <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg font-semibold ${statutClass}">
                                         <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
                                         <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
                                         <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
@@ -3277,9 +3280,20 @@
         }
 
         async function updateEffetStatut(id, newStatut) {
-            await setDoc(doc(window.db, "effets", id), { statut: newStatut }, { merge: true });
+
+            await window.setDoc(
+                window.doc(window.db, "effets", id),
+                { statut: newStatut },
+                { merge: true }
+            );
+
             const item = appState.effets.find(e => e.id === id);
-            if (item) item.statut = newStatut;
+
+            if (item) {
+                item.statut = newStatut;
+            }
+
+            renderEffetsTable();
         }
 
         async function deleteEffet(id) {

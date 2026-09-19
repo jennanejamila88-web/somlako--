@@ -491,7 +491,15 @@
                                     <th class="py-3 px-4 text-right">Total Paniers</th>
                                     <th class="py-3 px-4 text-center">Jours avec Panier</th>
                                     <th class="py-3 px-4 text-right">Net à Payer</th>
-                                    <th class="py-3 px-4 text-center">Validation</th>
+                                    <th class="py-3 px-4 text-center">
+                                        <button type="button"
+                                                onclick="togglePaieStatutSort()"
+                                                class="inline-flex items-center gap-2 font-semibold uppercase">
+                                            Validation
+                                            <i id="paie-statut-sort-icon"
+                                               class="fa-solid fa-sort text-slate-400"></i>
+                                        </button>
+                                    </th>
                                     <th class="py-3 px-4 text-center no-print">Enveloppe DL</th>
                                 </tr>
                             </thead>
@@ -2177,6 +2185,19 @@
             }
         }
 
+        let paieStatutSort = null;
+
+        function togglePaieStatutSort() {
+
+            if (paieStatutSort === null || paieStatutSort === 'non-valides') {
+                paieStatutSort = 'valides';
+            } else {
+                paieStatutSort = 'non-valides';
+            }
+
+            renderPaieSummary();
+        }
+
         function renderPaieSummary() {
             const tbody = document.getElementById('table-paie-body');
             tbody.innerHTML = '';
@@ -2214,7 +2235,27 @@
                 }
             });
 
-            Object.keys(summary).forEach(id => {
+            let idsTries = Object.keys(summary);
+
+            if (paieStatutSort) {
+                idsTries.sort((idA, idB) => {
+
+                    const valideA = appState.paieValidations[idA] === 'Validé';
+                    const valideB = appState.paieValidations[idB] === 'Validé';
+
+                    if (valideA === valideB) {
+                        return summary[idA].nom.localeCompare(summary[idB].nom);
+                    }
+
+                    if (paieStatutSort === 'valides') {
+                        return valideA ? -1 : 1;
+                    }
+
+                    return valideA ? 1 : -1;
+                });
+            }
+
+            idsTries.forEach(id => {
                 let d = summary[id];
                 let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
                 let montantHs = d.totalHs * d.tauxHs;

@@ -1516,62 +1516,6 @@
             updateChantiersDropdown();
         }
 
-       
-        async function loadPaiePeriode() {
-
-            const dateDebut = document.getElementById('paie-date-debut').value;
-            const dateFin = document.getElementById('paie-date-fin').value;
-
-            if (!dateDebut || !dateFin) {
-                alert("Veuillez sélectionner une date de début et une date de fin.");
-                return;
-            }
-
-            if (dateDebut > dateFin) {
-                alert("La date de début ne peut pas être supérieure à la date de fin.");
-                return;
-            }
-
-            try {
-
-                // Charger les pointages de la période sélectionnée
-                const q = window.query(
-                    window.collection(window.db, "pointages"),
-                    window.where("date", ">=", dateDebut),
-                    window.where("date", "<=", dateFin)
-                );
-
-                // Charger aussi les anciennes validations
-                const [snap, valSnap] = await Promise.all([
-                    window.getDocs(q),
-                    window.getDocs(
-                        window.collection(window.db, "paie_validations")
-                    )
-                ]);
-
-                paiePointages = snap.docs.map(d => ({
-                    id: d.id,
-                    ...d.data()
-                }));
-
-                // Restaurer les validations enregistrées dans Firebase
-                appState.paieValidations = {};
-
-                valSnap.forEach(d => {
-                    appState.paieValidations[d.id] = d.data().statut;
-                });
-
-                paiePeriode.debut = dateDebut;
-                paiePeriode.fin = dateFin;
-
-                renderPaieSummary();
-
-            } catch (err) {
-                console.error("Erreur chargement période de paie :", err);
-                alert("Impossible de charger la période de paie.");
-            }
-        }
-
         async function loadTransportData() {
             await loadOnce('transport', async () => {
                 const snap = await getDocs(collection(window.db, "transport"));

@@ -1503,40 +1503,24 @@
             });
         }
 
-        //async function loadPointageData() {
-        //    await loadOnce('pointages', async () => {
-        //        const [poiSnap, valSnap] = await Promise.all([
-        //            getDocs(collection(window.db, "pointages")),
-        //            getDocs(collection(window.db, "paie_validations"))
-        //        ]);
-
-        //        appState.pointages = poiSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        //        appState.paieValidations = {};
-        //        valSnap.forEach(d => { appState.paieValidations[d.id] = d.data().statut; });
-
-        //        renderPointagesTable();
-        //        updateChantiersDropdown();
-        //    });
-        //}
-
+        
         let pointagePeriode = {
             debut: '',
             fin: ''
         };
 
         async function loadPointageData() {
+
             appState.pointages = [];
             renderPointagesTable();
             updateChantiersDropdown();
         }
 
-        async function loadPointagePeriode() {
+       
+        async function loadPaiePeriode() {
 
-            const dateDebut =
-                document.getElementById('pointage-date-debut').value;
-
-            const dateFin =
-                document.getElementById('pointage-date-fin').value;
+            const dateDebut = document.getElementById('paie-date-debut').value;
+            const dateFin = document.getElementById('paie-date-fin').value;
 
             if (!dateDebut || !dateFin) {
                 alert("Veuillez sélectionner une date de début et une date de fin.");
@@ -1550,28 +1534,41 @@
 
             try {
 
+                // Charger les pointages de la période sélectionnée
                 const q = window.query(
                     window.collection(window.db, "pointages"),
                     window.where("date", ">=", dateDebut),
                     window.where("date", "<=", dateFin)
                 );
 
-                const snap = await window.getDocs(q);
+                // Charger aussi les anciennes validations
+                const [snap, valSnap] = await Promise.all([
+                    window.getDocs(q),
+                    window.getDocs(
+                        window.collection(window.db, "paie_validations")
+                    )
+                ]);
 
-                appState.pointages = snap.docs.map(d => ({
+                paiePointages = snap.docs.map(d => ({
                     id: d.id,
                     ...d.data()
                 }));
 
-                pointagePeriode.debut = dateDebut;
-                pointagePeriode.fin = dateFin;
+                // Restaurer les validations enregistrées dans Firebase
+                appState.paieValidations = {};
 
-                updateChantiersDropdown();
-                renderPointagesTable();
+                valSnap.forEach(d => {
+                    appState.paieValidations[d.id] = d.data().statut;
+                });
+
+                paiePeriode.debut = dateDebut;
+                paiePeriode.fin = dateFin;
+
+                renderPaieSummary();
 
             } catch (err) {
-                console.error("Erreur chargement période de pointage :", err);
-                alert("Impossible de charger la période de pointage.");
+                console.error("Erreur chargement période de paie :", err);
+                alert("Impossible de charger la période de paie.");
             }
         }
 
@@ -2199,12 +2196,31 @@
                     window.where("date", "<=", dateFin)
                 );
 
-                const snap = await window.getDocs(q);
+                //const snap = await window.getDocs(q);
+
+                //paiePointages = snap.docs.map(d => ({
+                //    id: d.id,
+                //    ...d.data()
+                //}));
+                const [snap, valSnap] = await Promise.all([
+                    window.getDocs(q),
+                    window.getDocs(
+                        window.collection(window.db, "paie_validations")
+                    )
+                ]);
 
                 paiePointages = snap.docs.map(d => ({
                     id: d.id,
                     ...d.data()
                 }));
+
+                // Recharger les validations existantes,
+                // y compris les anciens enregistrements.
+                appState.paieValidations = {};
+
+                valSnap.forEach(d => {
+                    appState.paieValidations[d.id] = d.data().statut;
+                });
 
                 paiePeriode.debut = dateDebut;
                 paiePeriode.fin = dateFin;
@@ -2288,10 +2304,26 @@
             document.getElementById('total-global-net').innerText = `${grandTotalNet.toFixed(2)} Dhs`;
         }
 
+ 
         async function validatePaie(salarieId) {
-            appState.paieValidations[salarieId] = 'Validé';
-            await setDoc(doc(window.db, "paie_validations", salarieId), { statut: 'Validé' });
-            renderPaieSummary();
+
+            try {
+
+                await window.setDoc(
+                    window.doc(window.db, "paie_validations", salarieId),
+                    { statut: 'Validé' }
+                );
+
+                // On change l'affichage seulement APRÈS
+                // que Firebase a confirmé l'enregistrement.
+                appState.paieValidations[salarieId] = 'Validé';
+
+                renderPaieSummary();
+
+            } catch (err) {
+                console.error("Erreur validation paie :", err);
+                alert("La validation n'a pas pu être enregistrée.");
+            }
         }
 
         function printSingleEnvelope(nom, fonction, chantier, net) {
@@ -2955,68 +2987,6 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
-
-
-        //function updateTransportFormByType() {
-
-        //    const type = document.getElementById('t-type').value;
-
-        //    const groupChauffeur = document.getElementById('group-t-chauffeur');
-        //    const groupTitulaire = document.getElementById('group-t-titulaire');
-        //    const groupBon = document.getElementById('group-t-bon');
-        //    const groupReference = document.getElementById('group-t-reference');
-        //    const groupTrajet = document.getElementById('group-t-trajet');
-
-        //    const labelQte = document.getElementById('label-t-qte');
-        //    const labelPu = document.getElementById('label-t-pu');
-
-        //    const inputQte = document.getElementById('t-qte');
-        //    const inputPu = document.getElementById('t-pu');
-
-
-        //    // ==============================
-        //    // GASOIL
-        //    // ==============================
-        //    if (type === 'Gasoil') {
-
-        //        // Cacher les champs inutiles
-        //        groupChauffeur.style.display = 'none';
-        //        groupTitulaire.style.display = 'none';
-        //        groupBon.style.display = 'none';
-        //        groupReference.style.display = 'none';
-        //        groupTrajet.style.display = 'none';
-
-        //        // Adapter les intitulés
-        //        labelQte.innerText = 'Quantité (litres)';
-        //        labelPu.innerText = 'Prix / litre (Dhs)';
-
-        //        inputQte.placeholder = 'Ex : 200';
-        //        inputPu.placeholder = 'Ex : 14.80';
-        //    }
-
-
-        //    // ==============================
-        //    // VOYAGE
-        //    // ==============================
-        //    else {
-
-        //        // Réafficher tous les champs
-        //        groupChauffeur.style.display = '';
-        //        groupTitulaire.style.display = '';
-        //        groupBon.style.display = '';
-        //        groupReference.style.display = '';
-        //        groupTrajet.style.display = '';
-
-        //        // Intitulés Voyage
-        //        labelQte.innerText = 'Nombre de trajets';
-        //        labelPu.innerText = 'Prix / trajet (Dhs)';
-
-        //        inputQte.placeholder = 'Ex : 1';
-        //        inputPu.placeholder = 'Ex : 2200';
-        //    }
-
-        //    calculateTransportTotal();
-        //}
 
         // EFFETS LOGIC
         function openEffetModal() {

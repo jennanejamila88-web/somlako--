@@ -49,6 +49,8 @@
                 document.getElementById('auth-modal').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
                 document.getElementById('user-display-name').innerText = appState.currentUser.username;
+                restaurerPeriodePointage();
+                restaurerPeriodePaie();
                 initAppFromFirebase();
             }
         });
@@ -350,6 +352,12 @@
                                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl">
                             <i class="fa-solid fa-magnifying-glass"></i>
                             Charger les pointages
+                        </button>
+                        <button type="button"
+                                onclick="resetPeriodePointage()"
+                                class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-xl">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            Réinitialiser
                         </button>
 
                     </div>
@@ -900,6 +908,48 @@
     <div id="print-section-area"></div>
 
     <!-- MODALS SECTION -->
+    <!-- Modal détail pointage employé -->
+    <div id="modal-detail-paie"
+         class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
+
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-6xl p-6">
+
+            <div class="flex items-start justify-between mb-5">
+                <div>
+                    <h3 class="text-lg font-bold">
+                        Détail employé :
+                        <span id="detail-paie-nom"></span>
+                    </h3>
+
+                    <p id="detail-paie-periode"
+                       class="text-sm text-slate-500 mt-1"></p>
+                </div>
+
+                <button type="button"
+                        onclick="closeDetailPaie()"
+                        class="text-slate-400 hover:text-slate-700 text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Défilement horizontal si la période contient beaucoup de jours -->
+            <div class="overflow-x-auto border rounded-xl">
+                <table id="detail-paie-table"
+                       class="text-sm border-collapse whitespace-nowrap">
+                    <tbody id="detail-paie-body"></tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end mt-5">
+                <button type="button"
+                        onclick="closeDetailPaie()"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-semibold">
+                    Fermer
+                </button>
+            </div>
+
+        </div>
+    </div>
 
     <div id="modal-salarie"
          class="fixed inset-0 z-50 bg-slate-900/60 hidden items-center justify-center p-4">
@@ -1421,11 +1471,11 @@
             if (!table) return;
             const printContainer = document.getElementById('print-section-area');
             printContainer.innerHTML = `
-                            <div style="padding: 20px;">
-                                <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
-                                ${table.outerHTML}
-                            </div>
-                        `;
+                                <div style="padding: 20px;">
+                                    <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 15px; text-align: center;">${title}</h2>
+                                    ${table.outerHTML}
+                                </div>
+                            `;
             window.print();
             printContainer.innerHTML = '';
         }
@@ -1520,7 +1570,7 @@
             });
         }
 
-        
+
         let pointagePeriode = {
             debut: '',
             fin: ''
@@ -1531,6 +1581,19 @@
             appState.pointages = [];
             renderPointagesTable();
             updateChantiersDropdown();
+        }
+
+        function restaurerPeriodePointage() {
+            const dateDebut = localStorage.getItem('pointage_date_debut');
+            const dateFin = localStorage.getItem('pointage_date_fin');
+
+            if (dateDebut) {
+                document.getElementById('pointage-date-debut').value = dateDebut;
+            }
+
+            if (dateFin) {
+                document.getElementById('pointage-date-fin').value = dateFin;
+            }
         }
 
         async function loadPointagePeriode() {
@@ -1547,6 +1610,10 @@
                 alert("La date de début ne peut pas être supérieure à la date de fin.");
                 return;
             }
+
+            // Mémoriser la période choisie
+            localStorage.setItem('pointage_date_debut', dateDebut);
+            localStorage.setItem('pointage_date_fin', dateFin);
 
             try {
 
@@ -1573,6 +1640,22 @@
                 console.error("Erreur chargement période pointage :", err);
                 alert("Impossible de charger les pointages de cette période.");
             }
+        }
+
+        function resetPeriodePointage() {
+            document.getElementById('pointage-date-debut').value = '';
+            document.getElementById('pointage-date-fin').value = '';
+
+            localStorage.removeItem('pointage_date_debut');
+            localStorage.removeItem('pointage_date_fin');
+
+            pointagePeriode.debut = '';
+            pointagePeriode.fin = '';
+
+            appState.pointages = [];
+
+            updateChantiersDropdown();
+            renderPointagesTable();
         }
 
         async function loadTransportData() {
@@ -1775,15 +1858,15 @@
             // Aucun résultat
             if (salariesFiltres.length === 0) {
                 tbody.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center py-6 text-slate-400">
-                                ${recherche
+                            <tr>
+                                <td colspan="5" class="text-center py-6 text-slate-400">
+                                    ${recherche
                         ? 'Aucun employé trouvé pour cette recherche'
                         : 'Aucune donnée disponible'
                     }
-                            </td>
-                        </tr>
-                    `;
+                                </td>
+                            </tr>
+                        `;
                 return;
             }
 
@@ -1792,40 +1875,40 @@
 
             salariesFiltres.forEach(s => {
                 tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50">
-                            <td class="py-3 px-4 font-bold">${s.nom}</td>
+                            <tr class="hover:bg-slate-50">
+                                <td class="py-3 px-4 font-bold">${s.nom}</td>
 
-                            <td class="py-3 px-4">
-                                ${s.fonction}
-                            </td>
+                                <td class="py-3 px-4">
+                                    ${s.fonction}
+                                </td>
 
-                            <td class="py-3 px-4">
-                                ${s.tauxHs} Dhs
-                            </td>
+                                <td class="py-3 px-4">
+                                    ${s.tauxHs} Dhs
+                                </td>
 
-                            <td class="py-3 px-4">
-                                ${s.panier} Dhs
-                            </td>
+                                <td class="py-3 px-4">
+                                    ${s.panier} Dhs
+                                </td>
 
-                            <td class="py-3 px-4 text-right">
-                                <div class="flex items-center justify-end gap-3">
-                                    <button
-                                        onclick="editSalarie('${s.id}')"
-                                        class="text-blue-600 hover:text-blue-800"
-                                        title="Modifier">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <button
-                                        onclick="deleteSalarie('${s.id}')"
-                                        class="text-rose-600 hover:text-rose-800"
-                                        title="Supprimer">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-3">
+                                        <button
+                                            onclick="editSalarie('${s.id}')"
+                                            class="text-blue-600 hover:text-blue-800"
+                                            title="Modifier">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button
+                                            onclick="deleteSalarie('${s.id}')"
+                                            class="text-rose-600 hover:text-rose-800"
+                                            title="Supprimer">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
 
-                                </div>
-                            </td>
-                        </tr>
-                        `;
+                                    </div>
+                                </td>
+                            </tr>
+                            `;
             });
         }
 
@@ -2110,30 +2193,30 @@
             filteredPointages.forEach(p => {
                 let hsBadge = p.hs > 0 ? `<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 font-bold">${p.hs} h</span>` : '<span class="text-slate-400">-</span>';
                 html += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4">${p.date}</td>
-                                <td class="py-3 px-4 font-bold">${p.salNom}</td>
-                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
-                                <td class="py-3 px-4">${hsBadge}</td>
-                                <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
-                                <td class="py-3 px-4 text-right no-print">
-                                    <div class="flex items-center justify-end gap-3">
-                                        <button
-                                            onclick="editPointage('${p.id}')"
-                                            class="text-blue-600 hover:text-blue-800"
-                                            title="Modifier">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
+                                    <td class="py-3 px-4">${p.date}</td>
+                                    <td class="py-3 px-4 font-bold">${p.salNom}</td>
+                                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-semibold">${p.chantier}</span></td>
+                                    <td class="py-3 px-4">${hsBadge}</td>
+                                    <td class="py-3 px-4">${p.panierActive ? p.panierMontant + ' Dhs' : '-'}</td>
+                                    <td class="py-3 px-4 text-right no-print">
+                                        <div class="flex items-center justify-end gap-3">
+                                            <button
+                                                onclick="editPointage('${p.id}')"
+                                                class="text-blue-600 hover:text-blue-800"
+                                                title="Modifier">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
 
-                                        <button
-                                            onclick="deletePointage('${p.id}')"
-                                            class="text-rose-600 hover:text-rose-800"
-                                            title="Supprimer">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                            <button
+                                                onclick="deletePointage('${p.id}')"
+                                                class="text-rose-600 hover:text-rose-800"
+                                                title="Supprimer">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
 
-                                    </div>
-                                </td>
-                            </tr>`;
+                                        </div>
+                                    </td>
+                                </tr>`;
             });
             tbody.innerHTML = html;
         }
@@ -2176,6 +2259,21 @@
             debut: '',
             fin: ''
         };
+
+        function restaurerPeriodePaie() {
+
+            const dateDebut = localStorage.getItem('paie_date_debut');
+            const dateFin = localStorage.getItem('paie_date_fin');
+
+            if (dateDebut) {
+                document.getElementById('paie-date-debut').value = dateDebut;
+            }
+
+            if (dateFin) {
+                document.getElementById('paie-date-fin').value = dateFin;
+            }
+        }
+
         async function loadPaiePeriode() {
 
             const dateDebut = document.getElementById('paie-date-debut').value;
@@ -2190,6 +2288,10 @@
                 alert("La date de début ne peut pas être supérieure à la date de fin.");
                 return;
             }
+
+            // Mémoriser la dernière période utilisée pour la paie
+            localStorage.setItem('paie_date_debut', dateDebut);
+            localStorage.setItem('paie_date_fin', dateFin);
 
             try {
 
@@ -2254,13 +2356,13 @@
             tbody.innerHTML = '';
             if (!paiePeriode.debut || !paiePeriode.fin) {
                 tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="py-10 text-center text-slate-400">
-                        Sélectionnez une date de début et une date de fin,
-                        puis cliquez sur "Charger la paie".
-                    </td>
-                </tr>
-            `;
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-slate-400">
+                            Sélectionnez une date de début et une date de fin,
+                            puis cliquez sur "Charger la paie".
+                        </td>
+                    </tr>
+                `;
 
                 document.getElementById('total-global-hsupp').innerText = '0 h';
                 document.getElementById('total-global-paniers').innerText = '0 Dhs';
@@ -2323,16 +2425,31 @@
                     : `<button onclick="validatePaie('${id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 text-xs font-bold rounded-lg border border-amber-300">Valider</button>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 font-bold">${d.nom}</td>
-                                <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
-                                <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
-                                <td class="py-3 px-4 text-center font-semibold">${d.joursPanier}</td>
-                                <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
-                                <td class="py-3 px-4 text-center">${validationBadge}</td>
-                                <td class="py-3 px-4 text-center no-print">
-                                    <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')" class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">Enveloppe</button>
-                                </td>
-                            </tr>`;
+                                    <td class="py-3 px-4 font-bold">${d.nom}</td>
+                                    <td class="py-3 px-4 text-center font-semibold text-blue-600">${d.totalHs} h</td>
+                                    <td class="py-3 px-4 text-right">${d.paniers} Dhs</td>
+                                    <td class="py-3 px-4 text-center font-semibold">${d.joursPanier}</td>
+                                    <td class="py-3 px-4 text-right font-bold text-emerald-600">${netAPayer.toFixed(2)} Dhs</td>
+                                    <td class="py-3 px-4 text-center">${validationBadge}</td>
+                                    <td class="py-3 px-4 text-center no-print">
+                                    <td class="py-3 px-4 text-center no-print">
+                                        <div class="flex items-center justify-center gap-2">
+
+                                            <button onclick="openDetailPaie('${id}')"
+                                                    class="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded font-semibold hover:bg-slate-200">
+                                                <i class="fa-solid fa-eye"></i>
+                                                Détails
+                                            </button>
+
+                                            <button onclick="printSingleEnvelope('${d.nom}', '${d.fonction}', '${chantiersStr}', '${netAPayer.toFixed(2)} Dhs')"
+                                                    class="px-2 py-1 bg-indigo-50 text-indigo-600 text-xs rounded font-semibold hover:bg-indigo-100">
+                                                Enveloppe
+                                            </button>
+
+                                        </div>
+                                    </td>
+                                    </td>
+                                </tr>`;
             });
 
             document.getElementById('total-global-hsupp').innerText = `${grandTotalHs} h`;
@@ -2340,7 +2457,140 @@
             document.getElementById('total-global-net').innerText = `${grandTotalNet.toFixed(2)} Dhs`;
         }
 
- 
+        function openDetailPaie(salarieId) {
+
+            const salarie = appState.salaries.find(s => s.id === salarieId);
+
+            if (!salarie || !paiePeriode.debut || !paiePeriode.fin) {
+                return;
+            }
+
+            document.getElementById('detail-paie-nom').innerText = salarie.nom;
+
+            document.getElementById('detail-paie-periode').innerText =
+                `Période : du ${formatDatePointage(paiePeriode.debut)} au ${formatDatePointage(paiePeriode.fin)}`;
+
+            // Pointages de cet employé uniquement
+            const pointagesSalarie = paiePointages.filter(
+                p => p.salId === salarieId
+            );
+
+            // Regrouper les pointages par date
+            const pointagesParDate = {};
+
+            pointagesSalarie.forEach(p => {
+
+                if (!pointagesParDate[p.date]) {
+                    pointagesParDate[p.date] = [];
+                }
+
+                pointagesParDate[p.date].push(p);
+            });
+
+            let ligneJours = `
+        <tr class="bg-slate-100 font-bold">
+            <td class="sticky left-0 bg-slate-100 border px-4 py-3">
+                Jour
+            </td>
+    `;
+
+            let lignePanier = `
+        <tr>
+            <td class="sticky left-0 bg-white border px-4 py-3 font-bold">
+                Panier
+            </td>
+    `;
+
+            let ligneHs = `
+        <tr>
+            <td class="sticky left-0 bg-white border px-4 py-3 font-bold">
+                H. Sup
+            </td>
+    `;
+
+            // On évite les problèmes de fuseau horaire :
+            // les dates sont manipulées à partir de YYYY-MM-DD.
+            const [anneeDebut, moisDebut, jourDebut] =
+                paiePeriode.debut.split('-').map(Number);
+
+            const [anneeFin, moisFin, jourFin] =
+                paiePeriode.fin.split('-').map(Number);
+
+            let dateCourante =
+                new Date(anneeDebut, moisDebut - 1, jourDebut);
+
+            const dateFin =
+                new Date(anneeFin, moisFin - 1, jourFin);
+
+            while (dateCourante <= dateFin) {
+
+                const annee = dateCourante.getFullYear();
+
+                const mois = String(
+                    dateCourante.getMonth() + 1
+                ).padStart(2, '0');
+
+                const jour = String(
+                    dateCourante.getDate()
+                ).padStart(2, '0');
+
+                const dateCle = `${annee}-${mois}-${jour}`;
+
+                const pointagesJour = pointagesParDate[dateCle] || [];
+
+                // Panier présent ?
+                const panierPresent =
+                    pointagesJour.some(p => p.panierActive);
+
+                // Total des heures supplémentaires du jour
+                const heuresSup = pointagesJour.reduce(
+                    (total, p) => total + (parseFloat(p.hs) || 0),
+                    0
+                );
+
+                ligneJours += `
+            <td class="border px-3 py-3 text-center font-bold">
+                ${parseInt(jour)}
+            </td>
+        `;
+
+                lignePanier += `
+            <td class="border px-3 py-3 text-center">
+                ${panierPresent ? 'P' : '—'}
+            </td>
+        `;
+
+                ligneHs += `
+            <td class="border px-3 py-3 text-center">
+                ${heuresSup > 0 ? heuresSup + 'h' : '—'}
+            </td>
+        `;
+
+                dateCourante.setDate(dateCourante.getDate() + 1);
+            }
+
+            ligneJours += '</tr>';
+            lignePanier += '</tr>';
+            ligneHs += '</tr>';
+
+            document.getElementById('detail-paie-body').innerHTML =
+                ligneJours + lignePanier + ligneHs;
+
+            const modal = document.getElementById('modal-detail-paie');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+
+        function closeDetailPaie() {
+
+            const modal = document.getElementById('modal-detail-paie');
+
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         async function validatePaie(salarieId) {
 
             try {
@@ -2365,21 +2615,21 @@
         function printSingleEnvelope(nom, fonction, chantier, net) {
             const container = document.getElementById('print-envelopes-container');
             container.innerHTML = `
-                            <div class="envelope-page">
-                                <div class="envelope-box">
-                                    <div class="w-full space-y-6 text-center">
-                                        <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
-                                        <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                            <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
-                                            <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
-                                        </div>
-                                        <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                            <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                            <span class="text-xl font-black text-blue-600">${net}</span>
+                                <div class="envelope-page">
+                                    <div class="envelope-box">
+                                        <div class="w-full space-y-6 text-center">
+                                            <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${nom}</h1></div>
+                                            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${fonction}</span></div>
+                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantier}</span></div>
+                                            </div>
+                                            <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                                <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                                <span class="text-xl font-black text-blue-600">${net}</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>`;
+                                </div>`;
             window.print();
             container.innerHTML = '';
         }
@@ -2405,21 +2655,21 @@
                 let chantiersStr = Array.from(d.chantiers).join(', ') || '-';
                 let netAPayer = d.paniers + (d.totalHs * d.tauxHs);
                 container.innerHTML += `
-                                <div class="envelope-page">
-                                    <div class="envelope-box">
-                                        <div class="w-full space-y-6 text-center">
-                                            <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
-                                            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
-                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
-                                                <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
-                                            </div>
-                                            <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
-                                                <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
-                                                <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                                    <div class="envelope-page">
+                                        <div class="envelope-box">
+                                            <div class="w-full space-y-6 text-center">
+                                                <div><span class="block text-xs uppercase tracking-widest text-slate-400 mb-1">Employé</span><h1 class="text-3xl font-black text-slate-900">${d.nom}</h1></div>
+                                                <div class="grid grid-cols-2 gap-4 max-w-md mx-auto text-left bg-slate-50 p-4 rounded-xl border">
+                                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Fonction</span><span class="text-sm font-bold">${d.fonction}</span></div>
+                                                    <div><span class="block text-xs font-semibold text-slate-400 uppercase">Chantier</span><span class="text-sm font-bold">${chantiersStr}</span></div>
+                                                </div>
+                                                <div class="max-w-md mx-auto bg-blue-50 border p-4 rounded-xl flex items-center justify-between">
+                                                    <span class="font-bold text-slate-700 text-sm uppercase">Net à Payer :</span>
+                                                    <span class="text-xl font-black text-blue-600">${netAPayer.toFixed(2)} Dhs</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>`;
+                                    </div>`;
             });
             window.print();
             container.innerHTML = '';
@@ -2747,26 +2997,26 @@
                     if (totalGasoil > 0) {
 
                         montantHtml = `
-                    <div class="font-bold text-emerald-700">
-                        ${gain.toFixed(2)} Dhs
-                    </div>
-                    <div class="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
-                        ${ligneTotal.toFixed(2)}
-                        -
-                        <span class="text-rose-600 font-semibold">
-                            ${totalGasoil.toFixed(2)} Gasoil
-                        </span>
-                    </div>
-                `;
+                        <div class="font-bold text-emerald-700">
+                            ${gain.toFixed(2)} Dhs
+                        </div>
+                        <div class="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                            ${ligneTotal.toFixed(2)}
+                            -
+                            <span class="text-rose-600 font-semibold">
+                                ${totalGasoil.toFixed(2)} Gasoil
+                            </span>
+                        </div>
+                    `;
                         grandTotal += gain;
 
                     } else {
 
                         montantHtml = `
-                    <div class="font-bold text-emerald-700">
-                        ${ligneTotal.toFixed(2)} Dhs
-                    </div>
-                `;
+                        <div class="font-bold text-emerald-700">
+                            ${ligneTotal.toFixed(2)} Dhs
+                        </div>
+                    `;
                         grandTotal += ligneTotal;
                     }
 
@@ -2776,49 +3026,49 @@
                     // on affiche son montant mais on ne l'ajoute pas au total des voyages
 
                     montantHtml = `
-                <div class="font-bold text-amber-600">
-                    ${ligneTotal.toFixed(2)} Dhs
-                </div>
-            `;
+                    <div class="font-bold text-amber-600">
+                        ${ligneTotal.toFixed(2)} Dhs
+                    </div>
+                `;
                 }
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 text-xs">${t.date}</td>
-                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
-                                <td class="py-3 px-4 font-bold">${t.chauffeur || '-'}</td>
-                                <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
-                                <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
-                                <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
-                                <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
-                                <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
-                                <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
-                                <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
-                                <td class="py-3 px-4 text-right">
-                                    ${montantHtml}
-                                </td>
-                                <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
-                                <td class="py-3 px-4 text-right no-print">
-                                    <div class="flex items-center justify-end gap-3">
+                                    <td class="py-3 px-4 text-xs">${t.date}</td>
+                                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">${t.type}</span></td>
+                                    <td class="py-3 px-4 font-bold">${t.chauffeur || '-'}</td>
+                                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${t.matricule || '-'}</td>
+                                    <td class="py-3 px-4"><span class="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">${t.chantier || '-'}</span></td>
+                                    <td class="py-3 px-4 text-xs">${t.bon || '-'}</td>
+                                    <td class="py-3 px-4 text-xs">${t.reference || '-'}</td>
+                                    <td class="py-3 px-4 text-xs font-semibold text-slate-700">${t.trajet || '-'}</td>
+                                    <td class="py-3 px-4 text-center font-bold">${t.qte || t.voyages || 1}</td>
+                                    <td class="py-3 px-4 text-right">${t.pu || 0} DH</td>
+                                    <td class="py-3 px-4 text-right">
+                                        ${montantHtml}
+                                    </td>
+                                    <td class="py-3 px-4 text-center"><span class="px-2 py-0.5 rounded text-xs ${t.valide ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${t.valide ? 'Validé' : 'En attente'}</span></td>
+                                    <td class="py-3 px-4 text-right no-print">
+                                        <div class="flex items-center justify-end gap-3">
 
-                                        <button
-                                            onclick="${t.type === 'Gasoil'
+                                            <button
+                                                onclick="${t.type === 'Gasoil'
                         ? `editGasoil('${t.id}')`
                         : `editTransport('${t.id}')`}"
-                                            class="text-blue-600 hover:text-blue-800"
-                                            title="Modifier">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
+                                                class="text-blue-600 hover:text-blue-800"
+                                                title="Modifier">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
 
-                                        <button
-                                            onclick="deleteTransport('${t.id}')"
-                                            class="text-rose-600 hover:text-rose-800"
-                                            title="Supprimer">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                            <button
+                                                onclick="deleteTransport('${t.id}')"
+                                                class="text-rose-600 hover:text-rose-800"
+                                                title="Supprimer">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
 
-                                    </div>
-                                </td>
-                            </tr>`;
+                                        </div>
+                                    </td>
+                                </tr>`;
             });
 
             document.getElementById('total-global-transport').innerText = `${grandTotal.toFixed(2)} Dhs`;
@@ -3209,42 +3459,42 @@
                     : 'bg-slate-50 text-slate-800';
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
-                                <td class="py-3 px-4 font-bold">${e.numero}</td>
-                                <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
-                                <td class="py-3 px-4">${e.serviceType || '-'}</td>
-                                <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
-                                <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
-                                <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
-                                <td class="py-3 px-4 text-center">
-                                    <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg font-semibold ${statutClass}">
-                                        <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
-                                        <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
-                                        <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
-                                        <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
-                                        <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
-                                    </select>
-                                </td>
-                                <td class="py-3 px-4 text-right no-print">
-                                    <div class="flex items-center justify-end gap-3">
+                                    <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs font-bold bg-purple-100 text-purple-800">${e.type}</span></td>
+                                    <td class="py-3 px-4 font-bold">${e.numero}</td>
+                                    <td class="py-3 px-4 font-bold">${e.beneficiaire}</td>
+                                    <td class="py-3 px-4">${e.serviceType || '-'}</td>
+                                    <td class="py-3 px-4 text-xs">${e.banque || '-'}</td>
+                                    <td class="py-3 px-4 text-xs">${e.echeance}${effetDateText}</td>
+                                    <td class="py-3 px-4 text-right font-bold">${e.montant} Dhs</td>
+                                    <td class="py-3 px-4 text-center">
+                                        <select onchange="updateEffetStatut('${e.id}', this.value)" class="text-xs p-1 border rounded-lg font-semibold ${statutClass}">
+                                            <option value="En attente" ${e.statut === 'En attente' ? 'selected' : ''}>En attente</option>
+                                            <option value="Effet Reporté" ${e.statut === 'Effet Reporté' ? 'selected' : ''}>Effet Reporté</option>
+                                            <option value="Encaissé" ${e.statut === 'Encaissé' ? 'selected' : ''}>Encaissé</option>
+                                            <option value="Impayé" ${e.statut === 'Impayé' ? 'selected' : ''}>Impayé</option>
+                                            <option value="Annulé" ${e.statut === 'Annulé' ? 'selected' : ''}>Annulé</option>
+                                        </select>
+                                    </td>
+                                    <td class="py-3 px-4 text-right no-print">
+                                        <div class="flex items-center justify-end gap-3">
 
-                                        <button
-                                            onclick="editEffet('${e.id}')"
-                                            class="text-blue-600 hover:text-blue-800"
-                                            title="Modifier">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
+                                            <button
+                                                onclick="editEffet('${e.id}')"
+                                                class="text-blue-600 hover:text-blue-800"
+                                                title="Modifier">
+                                                <i class="fa-solid fa-pen-to-square"></i>
+                                            </button>
 
-                                        <button
-                                            onclick="deleteEffet('${e.id}')"
-                                            class="text-rose-600 hover:text-rose-800"
-                                            title="Supprimer">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                            <button
+                                                onclick="deleteEffet('${e.id}')"
+                                                class="text-rose-600 hover:text-rose-800"
+                                                title="Supprimer">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
 
-                                    </div>
-                                </td>
-                            </tr>`;
+                                        </div>
+                                    </td>
+                                </tr>`;
             });
         }
 
@@ -3318,8 +3568,8 @@
 
                 appState.stockArticles.forEach(article => {
                     achatListe.innerHTML += `
-                        <option value="${article.ref} - ${article.nom}"></option>
-                    `;
+                            <option value="${article.ref} - ${article.nom}"></option>
+                        `;
                 });
             }
 
@@ -3328,8 +3578,8 @@
 
                 appState.stockArticles.forEach(article => {
                     sortieListe.innerHTML += `
-                        <option value="${article.ref} - ${article.nom}"></option>
-                    `;
+                            <option value="${article.ref} - ${article.nom}"></option>
+                        `;
                 });
             }
         }
@@ -3642,23 +3892,23 @@
                     `<span class="text-xs text-emerald-600 font-semibold"><i class="fa-solid fa-check"></i> OK</span>`;
 
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                                <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                                <td class="py-3 px-4 text-slate-600 font-semibold">${art.marque || '-'}</td>
-                                <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
-                                <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
-                                <td class="py-3 px-4 text-center">${resteBadge}</td>
-                                <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
-                                <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
-                                 <button onclick="editStockArticle('${art.id}')"
-                                        class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
-                                        title="Modifier article">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                    ${actionBtn}
-                                    <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
-                                </td>
-                            </tr>`;
+                                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                                    <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                                    <td class="py-3 px-4 text-slate-600 font-semibold">${art.marque || '-'}</td>
+                                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${totalAchats}</td>
+                                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${totalSorties}</td>
+                                    <td class="py-3 px-4 text-center">${resteBadge}</td>
+                                    <td class="py-3 px-4 text-center text-xs font-semibold text-slate-500">${art.seuil}</td>
+                                    <td class="py-3 px-4 text-center no-print flex items-center justify-center gap-2">
+                                     <button onclick="editStockArticle('${art.id}')"
+                                            class="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-xs"
+                                            title="Modifier article">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                        ${actionBtn}
+                                        <button onclick="deleteStockArticle('${art.id}')" class="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs" title="Supprimer article"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>`;
             });
         }
 
@@ -3673,14 +3923,14 @@
                 let art = appState.stockArticles.find(a => a.id === ac.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
-                                <td class="py-3 px-4 font-bold">${artNom}</td>
-                                <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
-                                <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
-                                <td class="py-3 px-4">${ac.fournisseur}</td>
-                                <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
-                                <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                            </tr>`;
+                                    <td class="py-3 px-4 text-xs font-semibold">${ac.date}</td>
+                                    <td class="py-3 px-4 font-bold">${artNom}</td>
+                                    <td class="py-3 px-4 text-center font-bold text-emerald-600">+${ac.quantite}</td>
+                                    <td class="py-3 px-4 text-right font-bold text-blue-600">${ac.prix} DH</td>
+                                    <td class="py-3 px-4">${ac.fournisseur}</td>
+                                    <td class="py-3 px-4 text-xs font-mono">${ac.bl}</td>
+                                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockAchat('${ac.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                                </tr>`;
             });
         }
 
@@ -3703,14 +3953,14 @@
                 let art = appState.stockArticles.find(a => a.id === so.articleId);
                 let artNom = art ? `${art.ref} - ${art.nom}` : 'Article Supprimé';
                 tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
-                                <td class="py-3 px-4 font-bold">${artNom}</td>
-                                <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
-                                <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
-                                <td class="py-3 px-4 text-xs">${so.preneur}</td>
-                                <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
-                                <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
-                            </tr>`;
+                                    <td class="py-3 px-4 text-xs font-semibold">${so.date}</td>
+                                    <td class="py-3 px-4 font-bold">${artNom}</td>
+                                    <td class="py-3 px-4 text-center font-bold text-rose-600">-${so.quantite}</td>
+                                    <td class="py-3 px-4 font-bold text-indigo-700 bg-indigo-50/50">${so.lieu}</td>
+                                    <td class="py-3 px-4 text-xs">${so.preneur}</td>
+                                    <td class="py-3 px-4 text-xs"><span class="px-2 py-0.5 bg-slate-100 rounded">${so.chantier}</span></td>
+                                    <td class="py-3 px-4 text-right no-print"><button onclick="deleteStockSortie('${so.id}')" class="text-rose-600"><i class="fa-solid fa-trash"></i></button></td>
+                                </tr>`;
             });
         }
 
@@ -3738,17 +3988,17 @@
                     let meilleurFournisseur = achatsArticle.length > 0 ? achatsArticle[achatsArticle.length - 1].fournisseur : 'Aucun historique';
 
                     tbody.innerHTML += `<tr class="hover:bg-slate-50">
-                                    <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
-                                    <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
-                                    <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
-                                    <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
-                                    <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
-                                    <td class="py-3 px-4 text-center no-print">
-                                        <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
-                                            <i class="fa-solid fa-cart-plus"></i> Commander
-                                        </button>
-                                    </td>
-                                </tr>`;
+                                        <td class="py-3 px-4 font-mono font-bold text-blue-600">${art.ref}</td>
+                                        <td class="py-3 px-4 font-bold text-slate-900">${art.nom}</td>
+                                        <td class="py-3 px-4 text-center font-extrabold text-rose-600">${reste}</td>
+                                        <td class="py-3 px-4 text-center text-slate-500 font-semibold">${art.seuil}</td>
+                                        <td class="py-3 px-4 font-semibold text-slate-700">${meilleurFournisseur}</td>
+                                        <td class="py-3 px-4 text-center no-print">
+                                            <button onclick="openAchatModal('${art.id}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs">
+                                                <i class="fa-solid fa-cart-plus"></i> Commander
+                                            </button>
+                                        </td>
+                                    </tr>`;
                 }
             });
 
